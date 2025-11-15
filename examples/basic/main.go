@@ -167,7 +167,84 @@ func main() {
 		func(x int) string { return fmt.Sprintf("[%d]", x*10) },
 	).ToSlice()
 	fmt.Printf("Input: %v\n", numbers8)
-	fmt.Printf("Skip(3) -> Where(x < 8) -> Take(3) -> Select: %v\n", combined)
+	fmt.Printf("Skip(3) -> Where(x < 8) -> Take(3) -> Select: %v\n\n", combined)
+
+	// Пример 14: SelectWithIndex - метод с индексом
+	fmt.Println("Example 14: SelectWithIndex (method with index)")
+	numbers9 := []int{1, 2, 3, 4, 5}
+	indexed := glinq.From(numbers9).
+		SelectWithIndex(func(x int, idx int) int { return x * idx }).
+		ToSlice()
+	fmt.Printf("Input: %v\n", numbers9)
+	fmt.Printf("SelectWithIndex(x * idx): %v\n\n", indexed)
+
+	// Пример 15: SelectWithIndex - функция с индексом (разные типы)
+	fmt.Println("Example 15: SelectWithIndex function (different types with index)")
+	numbers10 := []int{10, 20, 30}
+	indexedStrings := glinq.SelectWithIndex(
+		glinq.From(numbers10),
+		func(x int, idx int) string { return fmt.Sprintf("Value_%d_at_Index_%d", x, idx) },
+	).ToSlice()
+	fmt.Printf("Input: %v\n", numbers10)
+	fmt.Printf("SelectWithIndex to string: %v\n\n", indexedStrings)
+
+	// Пример 16: SelectWithIndex с Where
+	fmt.Println("Example 16: Where + SelectWithIndex")
+	numbers11 := []int{1, 2, 3, 4, 5, 6}
+	filteredIndexed := glinq.SelectWithIndex(
+		glinq.From(numbers11).
+			Where(func(x int) bool { return x%2 == 0 }),
+		func(x int, idx int) string {
+			return fmt.Sprintf("Even[%d]=%d", idx, x)
+		},
+	).ToSlice()
+	fmt.Printf("Input: %v\n", numbers11)
+	fmt.Printf("Where(even) -> SelectWithIndex: %v\n\n", filteredIndexed)
+
+	// Пример 17: Aggregate - сумма
+	fmt.Println("Example 17: Aggregate - Sum")
+	numbers12 := []int{1, 2, 3, 4, 5}
+	sum := glinq.From(numbers12).Aggregate(0, func(acc, x int) int { return acc + x })
+	fmt.Printf("Input: %v\n", numbers12)
+	fmt.Printf("Aggregate sum: %d\n\n", sum)
+
+	// Пример 18: Aggregate - произведение
+	fmt.Println("Example 18: Aggregate - Product")
+	numbers13 := []int{2, 3, 4}
+	product := glinq.From(numbers13).Aggregate(1, func(acc, x int) int { return acc * x })
+	fmt.Printf("Input: %v\n", numbers13)
+	fmt.Printf("Aggregate product: %d\n\n", product)
+
+	// Пример 19: Aggregate - конкатенация строк
+	fmt.Println("Example 19: Aggregate - String concatenation")
+	words := []string{"Hello", " ", "World", "!"}
+	concatenated := glinq.From(words).Aggregate("", func(acc, x string) string { return acc + x })
+	fmt.Printf("Input: %v\n", words)
+	fmt.Printf("Aggregate concatenation: '%s'\n\n", concatenated)
+
+	// Пример 20: Aggregate с фильтрацией
+	fmt.Println("Example 20: Aggregate with Where filter")
+	numbers14 := []int{1, 2, 3, 4, 5, 6, 7, 8}
+	sumOfEvens := glinq.From(numbers14).
+		Where(func(x int) bool { return x%2 == 0 }).
+		Aggregate(0, func(acc, x int) int { return acc + x })
+	fmt.Printf("Input: %v\n", numbers14)
+	fmt.Printf("Sum of even numbers: %d\n\n", sumOfEvens)
+
+	// Пример 21: Aggregate с кастомным типом
+	fmt.Println("Example 21: Aggregate with custom type")
+	type Point struct {
+		X, Y int
+	}
+	points := []Point{{1, 2}, {3, 4}, {5, 6}}
+	totalPoint := glinq.From(points).Aggregate(
+		Point{0, 0},
+		func(acc, p Point) Point {
+			return Point{acc.X + p.X, acc.Y + p.Y}
+		},
+	)
+	fmt.Printf("Input points: %+v\n", points)
+	fmt.Printf("Aggregate sum: Point{X:%d, Y:%d}\n\n", totalPoint.X, totalPoint.Y)
 
 	fmt.Println("\n=== End of Examples ===")
 }

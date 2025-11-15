@@ -185,6 +185,32 @@ func (s *stream[T]) Max(comparator func(T, T) int) (T, bool) {
 	return maxVal, found
 }
 
+// Aggregate applies an accumulator function over the Stream.
+// The seed parameter is the initial accumulator value.
+// The accumulator function is invoked for each element.
+// Returns the final accumulator value.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3, 4, 5}
+//	sum := From(numbers).Aggregate(0, func(acc, x int) int { return acc + x })
+//	// 15
+//
+//	numbers := []int{1, 2, 3}
+//	product := From(numbers).Aggregate(1, func(acc, x int) int { return acc * x })
+//	// 6
+func (s *stream[T]) Aggregate(seed T, accumulator func(T, T) T) T {
+	result := seed
+	for {
+		value, ok := s.source()
+		if !ok {
+			break
+		}
+		result = accumulator(result, value)
+	}
+	return result
+}
+
 // ToMapBy materializes Stream[T] into a map using selectors for key and value.
 //
 // Example:

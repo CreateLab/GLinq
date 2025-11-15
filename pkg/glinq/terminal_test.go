@@ -146,3 +146,70 @@ func TestForEach(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregate(t *testing.T) {
+	t.Run("Sum with Aggregate", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5}
+		result := From(slice).Aggregate(0, func(acc, x int) int { return acc + x })
+
+		if result != 15 {
+			t.Errorf("expected 15, got %d", result)
+		}
+	})
+
+	t.Run("Product with Aggregate", func(t *testing.T) {
+		slice := []int{1, 2, 3}
+		result := From(slice).Aggregate(1, func(acc, x int) int { return acc * x })
+
+		if result != 6 {
+			t.Errorf("expected 6, got %d", result)
+		}
+	})
+
+	t.Run("String concatenation with Aggregate", func(t *testing.T) {
+		slice := []string{"a", "b", "c"}
+		result := From(slice).Aggregate("", func(acc, x string) string { return acc + x })
+
+		if result != "abc" {
+			t.Errorf("expected 'abc', got '%s'", result)
+		}
+	})
+
+	t.Run("Aggregate with empty stream", func(t *testing.T) {
+		stream := Empty[int]()
+		result := stream.Aggregate(10, func(acc, x int) int { return acc + x })
+
+		if result != 10 {
+			t.Errorf("expected 10 (seed value), got %d", result)
+		}
+	})
+
+	t.Run("Aggregate with Where filter", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5}
+		result := From(slice).
+			Where(func(x int) bool { return x%2 == 0 }).
+			Aggregate(0, func(acc, x int) int { return acc + x })
+
+		if result != 6 {
+			t.Errorf("expected 6 (sum of even numbers), got %d", result)
+		}
+	})
+
+	t.Run("Aggregate with custom type", func(t *testing.T) {
+		type Point struct {
+			X, Y int
+		}
+
+		points := []Point{{1, 2}, {3, 4}, {5, 6}}
+		result := From(points).Aggregate(
+			Point{0, 0},
+			func(acc, p Point) Point {
+				return Point{acc.X + p.X, acc.Y + p.Y}
+			},
+		)
+
+		if result.X != 9 || result.Y != 12 {
+			t.Errorf("expected Point{X:9, Y:12}, got Point{X:%d, Y:%d}", result.X, result.Y)
+		}
+	})
+}

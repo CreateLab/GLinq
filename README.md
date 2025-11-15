@@ -81,6 +81,31 @@ strings := glinq.Select(
 // []string{"num_1", "num_2", "num_3"}
 ```
 
+#### SelectWithIndex (Method) - Same Type Transformation with Index
+
+The `SelectWithIndex` **method** transforms elements to the same type, providing the element index to the mapper function:
+
+```go
+numbers := []int{1, 2, 3}
+result := glinq.From(numbers).
+    SelectWithIndex(func(x int, idx int) int { return x * idx }).
+    ToSlice()
+// []int{0, 2, 6}
+```
+
+#### SelectWithIndex (Function) - Different Type Transformation with Index
+
+The `SelectWithIndex` **function** transforms elements to a different type, providing the element index to the mapper function:
+
+```go
+numbers := []int{1, 2, 3}
+strings := glinq.SelectWithIndex(
+    glinq.From(numbers),
+    func(x int, idx int) string { return fmt.Sprintf("num_%d_at_%d", x, idx) },
+).ToSlice()
+// []string{"num_1_at_0", "num_2_at_1", "num_3_at_2"}
+```
+
 ### Limiting Elements (Take and Skip)
 
 ```go
@@ -209,6 +234,24 @@ youngest, ok := glinq.From(people).Min(func(a, b Person) int {
 // youngest = Person{Age: 25, Name: "Bob"}, ok = true
 ```
 
+### Aggregating Elements (Aggregate)
+
+The `Aggregate` method applies an accumulator function over the Stream. The seed parameter is the initial accumulator value:
+
+```go
+numbers := []int{1, 2, 3, 4, 5}
+sum := glinq.From(numbers).Aggregate(0, func(acc, x int) int { return acc + x })
+// 15
+
+numbers := []int{2, 3, 4}
+product := glinq.From(numbers).Aggregate(1, func(acc, x int) int { return acc * x })
+// 24
+
+words := []string{"Hello", " ", "World", "!"}
+concatenated := glinq.From(words).Aggregate("", func(acc, x string) string { return acc + x })
+// "Hello World!"
+```
+
 ### Finding Maximum (Max)
 
 glinq provides **two ways** to find maximum:
@@ -267,6 +310,7 @@ These methods transform the Stream and return a new `Stream[T]`:
 
 - `Where(predicate func(T) bool) Stream[T]` - filter by condition
 - `Select(mapper func(T) T) Stream[T]` - transform elements to the same type
+- `SelectWithIndex(mapper func(T, int) T) Stream[T]` - transform elements to the same type with index
 - `Take(n int) Stream[T]` - take first n elements
 - `Skip(n int) Stream[T]` - skip first n elements
 
@@ -284,12 +328,14 @@ These methods materialize the Stream:
 - `ForEach(action func(T))` - execute action for each element
 - `Min(comparator func(T, T) int) (T, bool)` - find minimum element using comparator (works with any type)
 - `Max(comparator func(T, T) int) (T, bool)` - find maximum element using comparator (works with any type)
+- `Aggregate(seed T, accumulator func(T, T) T) T` - apply accumulator function over Stream
 
 ### Transformation Functions
 
 These standalone functions transform Stream to different types:
 
 - `Select[T, R any](s Stream[T], mapper func(T) R) Stream[R]` - transform elements to a different type (function version)
+- `SelectWithIndex[T, R any](s Stream[T], mapper func(T, int) R) Stream[R]` - transform elements to a different type with index (function version)
 
 ### Map Helper Functions
 

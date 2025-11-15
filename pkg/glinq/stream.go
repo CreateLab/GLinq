@@ -35,6 +35,12 @@ type Stream[T any] interface {
 	// Max returns the maximum element using comparator function.
 	// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
 	Max(comparator func(T, T) int) (T, bool)
+	// SelectWithIndex transforms elements to the same type, providing index to mapper function.
+	SelectWithIndex(mapper func(T, int) T) Stream[T]
+	// Aggregate applies an accumulator function over the Stream.
+	// The seed parameter is the initial accumulator value.
+	// The accumulator function is invoked for each element.
+	Aggregate(seed T, accumulator func(T, T) T) T
 }
 
 // stream represents the internal implementation of Stream.
