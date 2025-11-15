@@ -47,12 +47,12 @@ func (s *stream[T]) Select(mapper func(T) T) Stream[T] {
 //
 // Example:
 //
-//	strings := Map(
+//	strings := Select(
 //	    From([]int{1, 2, 3}),
 //	    func(x int) string { return fmt.Sprintf("num_%d", x) },
 //	).ToSlice()
 //	// []string{"num_1", "num_2", "num_3"}
-func Map[T, R any](s Stream[T], mapper func(T) R) Stream[R] {
+func Select[T, R any](s Stream[T], mapper func(T) R) Stream[R] {
 	return &stream[R]{
 		source: func() (R, bool) {
 			value, ok := s.Next()

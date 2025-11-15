@@ -29,35 +29,35 @@ func main() {
 	fmt.Printf("Input: %v\n", numbers2)
 	fmt.Printf("Filtered (> 5) and mapped (x * 2): %v\n\n", result)
 
-	// Пример 3: Map - преобразование в другой тип (int -> string)
-	fmt.Println("Example 3: Map (int -> string)")
+	// Пример 3: Select - преобразование в другой тип (int -> string)
+	fmt.Println("Example 3: Select (int -> string)")
 	numbers3 := []int{1, 2, 3, 4, 5}
-	strings := glinq.Map(
+	strings := glinq.Select(
 		glinq.From(numbers3),
 		func(x int) string { return fmt.Sprintf("Number: %d", x) },
 	).ToSlice()
 	fmt.Printf("Input: %v\n", numbers3)
 	fmt.Printf("Strings: %v\n\n", strings)
 
-	// Пример 4: Map с Where (combined)
-	fmt.Println("Example 4: Where + Map (different type)")
+	// Пример 4: Select с Where (combined)
+	fmt.Println("Example 4: Where + Select (different type)")
 	numbers4 := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	filtered := glinq.Map(
+	filtered := glinq.Select(
 		glinq.From(numbers4).Where(func(x int) bool { return x%2 == 0 }),
 		func(x int) string { return fmt.Sprintf("Even: %d", x) },
 	).ToSlice()
 	fmt.Printf("Input: %v\n", numbers4)
 	fmt.Printf("Even numbers as strings: %v\n\n", filtered)
 
-	// Пример 5: Map в структуру
-	fmt.Println("Example 5: Map to struct")
+	// Пример 5: Select в структуру
+	fmt.Println("Example 5: Select to struct")
 	type User struct {
 		ID   int
 		Name string
 	}
 
 	ids := []int{1, 2, 3}
-	users := glinq.Map(
+	users := glinq.Select(
 		glinq.From(ids),
 		func(id int) User {
 			return User{ID: id, Name: fmt.Sprintf("User%d", id)}
@@ -109,10 +109,10 @@ func main() {
 		ToSlice()
 	fmt.Printf("Result: %v\n\n", lazyResult)
 
-	// Пример 9: Lazy evaluation с Map
-	fmt.Println("Example 9: Lazy evaluation with Map")
+	// Пример 9: Lazy evaluation с Select
+	fmt.Println("Example 9: Lazy evaluation with Select")
 	fmt.Println("Notice: only 3 elements are processed due to Take(3)")
-	lazy := glinq.Map(
+	lazy := glinq.Select(
 		glinq.Range(1, 20).
 			Where(func(x int) bool {
 				fmt.Printf("  Checking %d\n", x)
@@ -156,10 +156,10 @@ func main() {
 	fmt.Printf("Input: %v\n", numbers7)
 	fmt.Printf("Skip(2) -> Where(even) -> Select(x*x) -> Take(3): %v\n\n", complex)
 
-	// Пример 13: Комбинация Skip, Map, Take
-	fmt.Println("Example 13: Skip + Map + Take")
+	// Пример 13: Комбинация Skip, Select, Take
+	fmt.Println("Example 13: Skip + Select + Take")
 	numbers8 := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	combined := glinq.Map(
+	combined := glinq.Select(
 		glinq.From(numbers8).
 			Skip(3).
 			Where(func(x int) bool { return x < 8 }).
@@ -167,7 +167,7 @@ func main() {
 		func(x int) string { return fmt.Sprintf("[%d]", x*10) },
 	).ToSlice()
 	fmt.Printf("Input: %v\n", numbers8)
-	fmt.Printf("Skip(3) -> Where(x < 8) -> Take(3) -> Map: %v\n", combined)
+	fmt.Printf("Skip(3) -> Where(x < 8) -> Take(3) -> Select: %v\n", combined)
 
 	fmt.Println("\n=== End of Examples ===")
 }

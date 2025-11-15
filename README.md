@@ -52,7 +52,13 @@ evens := glinq.From(numbers).
 // [2, 4]
 ```
 
-### Transformation (Select)
+### Transformation
+
+glinq provides **two ways** to transform elements:
+
+#### Select (Method) - Same Type Transformation
+
+The `Select` **method** transforms elements to the same type and supports method chaining:
 
 ```go
 numbers := []int{1, 2, 3}
@@ -60,6 +66,19 @@ squared := glinq.From(numbers).
     Select(func(x int) int { return x * x }).
     ToSlice()
 // [1, 4, 9]
+```
+
+#### Select (Function) - Different Type Transformation
+
+The `Select` **function** transforms elements to a different type. It's a standalone function (not a method) because Go methods cannot have their own type parameters:
+
+```go
+numbers := []int{1, 2, 3}
+strings := glinq.Select(
+    glinq.From(numbers),
+    func(x int) string { return fmt.Sprintf("num_%d", x) },
+).ToSlice()
+// []string{"num_1", "num_2", "num_3"}
 ```
 
 ### Limiting Elements (Take and Skip)
@@ -139,6 +158,84 @@ first, ok := glinq.From(numbers).First()
 // first = 1, ok = true
 ```
 
+### Splitting into Chunks (Chunk)
+
+```go
+numbers := []int{1, 2, 3, 4, 5, 6, 7}
+chunks := glinq.From(numbers).Chunk(3)
+// [][]int{{1, 2, 3}, {4, 5, 6}, {7}}
+```
+
+### Getting Last Element (Last)
+
+```go
+numbers := []int{1, 2, 3, 4, 5}
+last, ok := glinq.From(numbers).Last()
+// last = 5, ok = true
+```
+
+### Summing Elements (Sum)
+
+```go
+numbers := []int{1, 2, 3, 4, 5}
+sum := glinq.Sum(glinq.From(numbers))
+// 15
+```
+
+### Finding Minimum (Min)
+
+glinq provides **two ways** to find minimum:
+
+#### Min (Function) - For Ordered Types
+
+The `Min` **function** works with ordered types (int, uint, float, string):
+
+```go
+numbers := []int{5, 2, 8, 1, 9}
+min, ok := glinq.Min(glinq.From(numbers))
+// min = 1, ok = true
+```
+
+#### Min (Method) - With Comparator
+
+The `Min` **method** works with any type using a comparator function:
+
+```go
+type Person struct { Age int; Name string }
+people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}}
+youngest, ok := glinq.From(people).Min(func(a, b Person) int {
+    return a.Age - b.Age
+})
+// youngest = Person{Age: 25, Name: "Bob"}, ok = true
+```
+
+### Finding Maximum (Max)
+
+glinq provides **two ways** to find maximum:
+
+#### Max (Function) - For Ordered Types
+
+The `Max` **function** works with ordered types (int, uint, float, string):
+
+```go
+numbers := []int{5, 2, 8, 1, 9}
+max, ok := glinq.Max(glinq.From(numbers))
+// max = 9, ok = true
+```
+
+#### Max (Method) - With Comparator
+
+The `Max` **method** works with any type using a comparator function:
+
+```go
+type Person struct { Age int; Name string }
+people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}}
+oldest, ok := glinq.From(people).Max(func(a, b Person) int {
+    return a.Age - b.Age
+})
+// oldest = Person{Age: 30, Name: "Alice"}, ok = true
+```
+
 ### Lazy Evaluation Demonstration
 
 ```go
@@ -151,36 +248,72 @@ result := glinq.Range(1, 1000000).
 // Only ~6 elements processed, not a million!
 ```
 
-## Supported Operations
+## API Reference
 
-### Creators
+glinq provides both **methods** (on `Stream[T]` interface) and **standalone functions**. Methods support method chaining, while functions are used when type parameters are needed.
+
+### Creator Functions
+
+These functions create a new `Stream[T]`:
 
 - `From[T any](slice []T) Stream[T]` - create Stream from slice
 - `Empty[T any]() Stream[T]` - create empty Stream
 - `Range(start, count int) Stream[int]` - create Stream of integers
 - `FromMap[K, V](m map[K]V) Stream[KeyValue[K, V]]` - create Stream from map
 
-### Operators
+### Stream Methods (Operators)
+
+These methods transform the Stream and return a new `Stream[T]`:
 
 - `Where(predicate func(T) bool) Stream[T]` - filter by condition
-- `Select[R any](mapper func(T) R) Stream[R]` - transform elements
+- `Select(mapper func(T) T) Stream[T]` - transform elements to the same type
 - `Take(n int) Stream[T]` - take first n elements
 - `Skip(n int) Stream[T]` - skip first n elements
 
-### Terminal Operations
+### Stream Methods (Terminal Operations)
+
+These methods materialize the Stream:
 
 - `ToSlice() []T` - convert Stream to slice
+- `Chunk(size int) [][]T` - split Stream into chunks of specified size
 - `First() (T, bool)` - get first element
+- `Last() (T, bool)` - get last element
 - `Count() int` - count number of elements
 - `Any(predicate func(T) bool) bool` - check if any element exists
 - `All(predicate func(T) bool) bool` - check if all elements satisfy condition
 - `ForEach(action func(T))` - execute action for each element
+- `Min(comparator func(T, T) int) (T, bool)` - find minimum element using comparator (works with any type)
+- `Max(comparator func(T, T) int) (T, bool)` - find maximum element using comparator (works with any type)
 
-### Helper Functions
+### Transformation Functions
 
-- `Keys[K, V](stream Stream[KeyValue[K, V]]) Stream[K]` - extract keys
-- `Values[K, V](stream Stream[KeyValue[K, V]]) Stream[V]` - extract values
-- `ToMap[K, V](stream Stream[KeyValue[K, V]]) map[K]V` - convert to map
+These standalone functions transform Stream to different types:
+
+- `Select[T, R any](s Stream[T], mapper func(T) R) Stream[R]` - transform elements to a different type (function version)
+
+### Map Helper Functions
+
+These functions work with `Stream[KeyValue[K, V]]`:
+
+- `Keys[K, V](s Stream[KeyValue[K, V]]) Stream[K]` - extract keys from KeyValue pairs
+- `Values[K, V](s Stream[KeyValue[K, V]]) Stream[V]` - extract values from KeyValue pairs
+- `ToMap[K, V](s Stream[KeyValue[K, V]]) map[K]V` - convert Stream[KeyValue] to map
+
+### Terminal Functions
+
+These standalone functions materialize Streams:
+
+- `ToMapBy[T, K, V](s Stream[T], keySelector func(T) K, valueSelector func(T) V) map[K]V` - convert Stream[T] to map using selectors
+
+### Numeric Functions
+
+These functions work with numeric and ordered types:
+
+- `Sum[T Numeric](s Stream[T]) T` - calculate sum of all elements (works with int, uint, float types)
+- `Min[T Ordered](s Stream[T]) (T, bool)` - find minimum element for ordered types (works with int, uint, float, string types)
+- `Max[T Ordered](s Stream[T]) (T, bool)` - find maximum element for ordered types (works with int, uint, float, string types)
+
+**Note**: For custom types or complex comparisons, use the `Min` and `Max` methods with comparator functions instead.
 
 ## Requirements
 
@@ -201,7 +334,3 @@ go run examples/basic/main.go
 ## License
 
 MIT
-
-## Author
-
-your-username

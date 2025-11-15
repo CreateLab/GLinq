@@ -96,7 +96,7 @@ func TestSelect(t *testing.T) {
 func TestMap(t *testing.T) {
 	t.Run("Transform int to string", func(t *testing.T) {
 		input := []int{1, 2, 3}
-		result := Map(
+		result := Select(
 			From(input),
 			func(x int) string { return fmt.Sprintf("num_%d", x) },
 		).ToSlice()
@@ -114,7 +114,7 @@ func TestMap(t *testing.T) {
 		}
 
 		input := []int{1, 2, 3}
-		result := Map(
+		result := Select(
 			From(input),
 			func(id int) User {
 				return User{ID: id, Name: fmt.Sprintf("User%d", id)}
@@ -129,9 +129,9 @@ func TestMap(t *testing.T) {
 		}
 	})
 
-	t.Run("Chaining with Where and Map", func(t *testing.T) {
+	t.Run("Chaining with Where and Select", func(t *testing.T) {
 		input := []int{1, 2, 3, 4, 5}
-		result := Map(
+		result := Select(
 			From(input).Where(func(x int) bool { return x > 2 }),
 			func(x int) string { return fmt.Sprintf("Number: %d", x) },
 		).ToSlice()

@@ -70,6 +70,121 @@ func (s *stream[T]) ForEach(action func(T)) {
 	}
 }
 
+// Chunk splits Stream into chunks of specified size and returns slice of slices.
+// The last chunk may contain fewer elements than the specified size.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3, 4, 5, 6, 7}
+//	chunks := From(numbers).Chunk(3)
+//	// [][]int{{1, 2, 3}, {4, 5, 6}, {7}}
+func (s *stream[T]) Chunk(size int) [][]T {
+	if size <= 0 {
+		return nil
+	}
+
+	var result [][]T
+	var currentChunk []T
+
+	for {
+		value, ok := s.source()
+		if !ok {
+			// Add the last chunk if it's not empty
+			if len(currentChunk) > 0 {
+				result = append(result, currentChunk)
+			}
+			break
+		}
+
+		currentChunk = append(currentChunk, value)
+
+		// When chunk reaches the desired size, add it to result and start a new one
+		if len(currentChunk) == size {
+			result = append(result, currentChunk)
+			currentChunk = nil
+		}
+	}
+
+	return result
+}
+
+// Last returns the last element and true, or zero value and false if Stream is empty.
+func (s *stream[T]) Last() (T, bool) {
+	var last T
+	var found bool
+
+	for {
+		value, ok := s.source()
+		if !ok {
+			break
+		}
+		last = value
+		found = true
+	}
+
+	return last, found
+}
+
+// Min returns the minimum element using comparator function.
+// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
+// Returns zero value and false if Stream is empty.
+//
+// Example:
+//
+//	type Person struct { Age int; Name string }
+//	people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}}
+//	youngest, ok := From(people).Min(func(a, b Person) int {
+//	    return a.Age - b.Age
+//	})
+//	// youngest = Person{Age: 25, Name: "Bob"}, ok = true
+func (s *stream[T]) Min(comparator func(T, T) int) (T, bool) {
+	var minVal T
+	var found bool
+
+	for {
+		value, ok := s.source()
+		if !ok {
+			break
+		}
+		if !found || comparator(value, minVal) < 0 {
+			minVal = value
+			found = true
+		}
+	}
+
+	return minVal, found
+}
+
+// Max returns the maximum element using comparator function.
+// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
+// Returns zero value and false if Stream is empty.
+//
+// Example:
+//
+//	type Person struct { Age int; Name string }
+//	people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}}
+//	oldest, ok := From(people).Max(func(a, b Person) int {
+//	    return a.Age - b.Age
+//	})
+//	// oldest = Person{Age: 30, Name: "Alice"}, ok = true
+func (s *stream[T]) Max(comparator func(T, T) int) (T, bool) {
+	var maxVal T
+	var found bool
+
+	for {
+		value, ok := s.source()
+		if !ok {
+			break
+		}
+		if !found || comparator(value, maxVal) > 0 {
+			maxVal = value
+			found = true
+		}
+	}
+
+	return maxVal, found
+}
+
 // ToMapBy materializes Stream[T] into a map using selectors for key and value.
 //
 // Example:

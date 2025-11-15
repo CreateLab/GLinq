@@ -25,6 +25,16 @@ type Stream[T any] interface {
 	All(predicate func(T) bool) bool
 	// ForEach executes an action for each element in Stream.
 	ForEach(action func(T))
+	// Chunk splits Stream into chunks of specified size and returns slice of slices.
+	Chunk(size int) [][]T
+	// Last returns the last element and true, or zero value and false if Stream is empty.
+	Last() (T, bool)
+	// Min returns the minimum element using comparator function.
+	// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
+	Min(comparator func(T, T) int) (T, bool)
+	// Max returns the maximum element using comparator function.
+	// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
+	Max(comparator func(T, T) int) (T, bool)
 }
 
 // stream represents the internal implementation of Stream.
