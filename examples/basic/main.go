@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/yourusername/glinq/pkg/glinq"
+	"github.com/CreateLab/glinq/pkg/glinq"
 )
 
 func main() {
-	fmt.Println("=== glinq Examples ===\n")
+	fmt.Println("=== glinq Examples ===")
+	fmt.Println()
 
 	// Пример 1: Select - преобразование в тот же тип
 	fmt.Println("Example 1: Select (same type transformation)")
@@ -97,7 +98,8 @@ func main() {
 	// Пример 8: Демонстрация lazy evaluation
 	fmt.Println("Example 8: Lazy evaluation demonstration")
 	fmt.Println("Creating stream with Range(1, 10) -> Where(x > 5) -> Take(3)")
-	fmt.Println("Only the necessary elements are processed:\n")
+	fmt.Println("Only the necessary elements are processed:")
+	fmt.Println()
 	lazyResult := glinq.Range(1, 10).
 		Where(func(x int) bool {
 			fmt.Printf("  Checking %d\n", x)
@@ -140,7 +142,7 @@ func main() {
 	glinq.From(numbers6).ForEach(func(x int) {
 		fmt.Printf("%d ", x*2)
 	})
-	fmt.Println("\n")
+	fmt.Println()
 
 	// Пример 12: Сложная цепочка операций
 	fmt.Println("Example 12: Complex chained operations")

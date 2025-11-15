@@ -1,32 +1,32 @@
 # glinq
 
-LINQ-подобный API для Go с поддержкой отложенного выполнения (lazy evaluation).
+LINQ-like API for Go with support for lazy evaluation.
 
-glinq предоставляет функциональный подход к работе со слайсами и картами в Go, вдохновленный Microsoft LINQ.
-Все операции выполняются лениво и не начинаются до вызова терминальной операции.
+glinq provides a functional approach to working with slices and maps in Go, inspired by Microsoft LINQ.
+All operations are executed lazily and do not start until a terminal operation is called.
 
-## Особенности
+## Features
 
-- **Lazy Evaluation**: Все промежуточные операции выполняются только при материализации результата
-- **Type Safe**: Полная поддержка generics (Go 1.18+)
-- **Composable**: Операции легко комбинируются в цепочки
-- **Zero Dependencies**: Не требует внешних зависимостей
-- **Map Support**: Встроенная поддержка работы с картами
+- **Lazy Evaluation**: All intermediate operations are executed only when the result is materialized
+- **Type Safe**: Full support for generics (Go 1.18+)
+- **Composable**: Operations can be easily combined into chains
+- **Zero Dependencies**: No external dependencies required
+- **Map Support**: Built-in support for working with maps
 
-## Установка
+## Installation
 
 ```bash
-go get github.com/yourusername/glinq
+go get github.com/CreateLab/glinq
 ```
 
-## Быстрый старт
+## Quick Start
 
 ```go
 package main
 
 import (
     "fmt"
-    "github.com/yourusername/glinq/pkg/glinq"
+    "github.com/CreateLab/glinq/pkg/glinq"
 )
 
 func main() {
@@ -40,9 +40,9 @@ func main() {
 }
 ```
 
-## Примеры использования
+## Usage Examples
 
-### Фильтрация (Where)
+### Filtering (Where)
 
 ```go
 numbers := []int{1, 2, 3, 4, 5}
@@ -52,7 +52,7 @@ evens := glinq.From(numbers).
 // [2, 4]
 ```
 
-### Трансформация (Select)
+### Transformation (Select)
 
 ```go
 numbers := []int{1, 2, 3}
@@ -62,21 +62,21 @@ squared := glinq.From(numbers).
 // [1, 4, 9]
 ```
 
-### Ограничение элементов (Take и Skip)
+### Limiting Elements (Take and Skip)
 
 ```go
 numbers := []int{1, 2, 3, 4, 5}
 
-// Take первые 3 элемента
+// Take first 3 elements
 first3 := glinq.From(numbers).Take(3).ToSlice()
 // [1, 2, 3]
 
-// Skip первые 2 элемента
+// Skip first 2 elements
 rest := glinq.From(numbers).Skip(2).ToSlice()
 // [3, 4, 5]
 ```
 
-### Работа с картами
+### Working with Maps
 
 ```go
 data := map[string]int{
@@ -93,7 +93,7 @@ filtered := glinq.FromMap(data).
 // map[apple:5 orange:8]
 ```
 
-### Проверка условий (Any и All)
+### Condition Checking (Any and All)
 
 ```go
 numbers := []int{1, 2, 3, 4, 5}
@@ -109,7 +109,7 @@ allPositive := glinq.From(numbers).All(func(x int) bool {
 // true
 ```
 
-### Подсчет элементов (Count)
+### Counting Elements (Count)
 
 ```go
 numbers := []int{1, 2, 3, 4, 5}
@@ -119,7 +119,7 @@ count := glinq.From(numbers).
 // 3
 ```
 
-### Выполнение действия для каждого элемента (ForEach)
+### Executing Action for Each Element (ForEach)
 
 ```go
 numbers := []int{1, 2, 3}
@@ -131,7 +131,7 @@ glinq.From(numbers).ForEach(func(x int) {
 // 3
 ```
 
-### Получение первого элемента (First)
+### Getting First Element (First)
 
 ```go
 numbers := []int{1, 2, 3}
@@ -139,69 +139,69 @@ first, ok := glinq.From(numbers).First()
 // first = 1, ok = true
 ```
 
-### Демонстрация lazy evaluation
+### Lazy Evaluation Demonstration
 
 ```go
-// Благодаря lazy evaluation, фильтр применяется только к необходимым элементам
+// Thanks to lazy evaluation, the filter is applied only to necessary elements
 result := glinq.Range(1, 1000000).
     Where(func(x int) bool { return x%2 == 0 }).
     Take(3).
     ToSlice()
 // [2, 4, 6]
-// Обработано только ~6 элементов, а не миллион!
+// Only ~6 elements processed, not a million!
 ```
 
-## Поддерживаемые операции
+## Supported Operations
 
-### Создатели (Creators)
+### Creators
 
-- `From[T any](slice []T) *Stream[T]` - создать Stream из слайса
-- `Empty[T any]() *Stream[T]` - создать пустой Stream
-- `Range(start, count int) *Stream[int]` - создать Stream целых чисел
-- `FromMap[K, V](m map[K]V) *Stream[KeyValue[K, V]]` - создать Stream из карты
+- `From[T any](slice []T) Stream[T]` - create Stream from slice
+- `Empty[T any]() Stream[T]` - create empty Stream
+- `Range(start, count int) Stream[int]` - create Stream of integers
+- `FromMap[K, V](m map[K]V) Stream[KeyValue[K, V]]` - create Stream from map
 
-### Операторы (Operators)
+### Operators
 
-- `Where(predicate func(T) bool) *Stream[T]` - фильтрация по условию
-- `Select[R any](mapper func(T) R) *Stream[R]` - преобразование элементов
-- `Take(n int) *Stream[T]` - взять первые n элементов
-- `Skip(n int) *Stream[T]` - пропустить первые n элементов
+- `Where(predicate func(T) bool) Stream[T]` - filter by condition
+- `Select[R any](mapper func(T) R) Stream[R]` - transform elements
+- `Take(n int) Stream[T]` - take first n elements
+- `Skip(n int) Stream[T]` - skip first n elements
 
-### Терминальные операции (Terminal Operations)
+### Terminal Operations
 
-- `ToSlice() []T` - преобразовать Stream в слайс
-- `First() (T, bool)` - получить первый элемент
-- `Count() int` - подсчитать количество элементов
-- `Any(predicate func(T) bool) bool` - проверить наличие элемента
-- `All(predicate func(T) bool) bool` - проверить все элементы
-- `ForEach(action func(T))` - выполнить действие для каждого элемента
+- `ToSlice() []T` - convert Stream to slice
+- `First() (T, bool)` - get first element
+- `Count() int` - count number of elements
+- `Any(predicate func(T) bool) bool` - check if any element exists
+- `All(predicate func(T) bool) bool` - check if all elements satisfy condition
+- `ForEach(action func(T))` - execute action for each element
 
-### Вспомогательные функции
+### Helper Functions
 
-- `Keys[K, V](stream *Stream[KeyValue[K, V]]) *Stream[K]` - извлечь ключи
-- `Values[K, V](stream *Stream[KeyValue[K, V]]) *Stream[V]` - извлечь значения
-- `ToMap[K, V](stream *Stream[KeyValue[K, V]]) map[K]V` - преобразовать в карту
+- `Keys[K, V](stream Stream[KeyValue[K, V]]) Stream[K]` - extract keys
+- `Values[K, V](stream Stream[KeyValue[K, V]]) Stream[V]` - extract values
+- `ToMap[K, V](stream Stream[KeyValue[K, V]]) map[K]V` - convert to map
 
-## Требования
+## Requirements
 
-- Go 1.18+ (для поддержки generics)
+- Go 1.18+ (for generics support)
 
-## Тестирование
+## Testing
 
 ```bash
 go test ./...
 ```
 
-## Запуск примеров
+## Running Examples
 
 ```bash
 go run examples/basic/main.go
 ```
 
-## Лицензия
+## License
 
 MIT
 
-## Автор
+## Author
 
 your-username

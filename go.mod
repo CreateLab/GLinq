@@ -1,3 +1,3 @@
-module github.com/yourusername/glinq
+module github.com/CreateLab/glinq
 
 go 1.25.0

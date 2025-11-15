@@ -1,7 +1,7 @@
 package glinq
 
-// ToSlice материализует Stream в слайс.
-func (s *Stream[T]) ToSlice() []T {
+// ToSlice materializes Stream into a slice.
+func (s *stream[T]) ToSlice() []T {
 	var result []T
 	for {
 		value, ok := s.source()
@@ -13,13 +13,13 @@ func (s *Stream[T]) ToSlice() []T {
 	return result
 }
 
-// First возвращает первый элемент и true, или zero value и false если Stream пустой.
-func (s *Stream[T]) First() (T, bool) {
+// First returns the first element and true, or zero value and false if Stream is empty.
+func (s *stream[T]) First() (T, bool) {
 	return s.source()
 }
 
-// Count возвращает количество элементов в Stream.
-func (s *Stream[T]) Count() int {
+// Count returns the number of elements in Stream.
+func (s *stream[T]) Count() int {
 	count := 0
 	for {
 		_, ok := s.source()
@@ -31,8 +31,8 @@ func (s *Stream[T]) Count() int {
 	return count
 }
 
-// Any проверяет, есть ли хотя бы один элемент, удовлетворяющий предикату.
-func (s *Stream[T]) Any(predicate func(T) bool) bool {
+// Any checks if there is at least one element satisfying the predicate.
+func (s *stream[T]) Any(predicate func(T) bool) bool {
 	for {
 		value, ok := s.source()
 		if !ok {
@@ -45,8 +45,8 @@ func (s *Stream[T]) Any(predicate func(T) bool) bool {
 	return false
 }
 
-// All проверяет, все ли элементы удовлетворяют предикату.
-func (s *Stream[T]) All(predicate func(T) bool) bool {
+// All checks if all elements satisfy the predicate.
+func (s *stream[T]) All(predicate func(T) bool) bool {
 	for {
 		value, ok := s.source()
 		if !ok {
@@ -59,8 +59,8 @@ func (s *Stream[T]) All(predicate func(T) bool) bool {
 	return true
 }
 
-// ForEach выполняет действие для каждого элемента в Stream.
-func (s *Stream[T]) ForEach(action func(T)) {
+// ForEach executes an action for each element in Stream.
+func (s *stream[T]) ForEach(action func(T)) {
 	for {
 		value, ok := s.source()
 		if !ok {
@@ -70,9 +70,9 @@ func (s *Stream[T]) ForEach(action func(T)) {
 	}
 }
 
-// ToMapBy материализует Stream[T] в map, используя селекторы для ключа и значения.
+// ToMapBy materializes Stream[T] into a map using selectors for key and value.
 //
-// Пример:
+// Example:
 //
 //	type User struct { ID int; Name string }
 //	users := []User{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}}
@@ -83,13 +83,13 @@ func (s *Stream[T]) ForEach(action func(T)) {
 //	)
 //	// map[int]string{1: "Alice", 2: "Bob"}
 func ToMapBy[T any, K comparable, V any](
-	stream *Stream[T],
+	s Stream[T],
 	keySelector func(T) K,
 	valueSelector func(T) V,
 ) map[K]V {
 	result := make(map[K]V)
 	for {
-		item, ok := stream.source()
+		item, ok := s.Next()
 		if !ok {
 			break
 		}

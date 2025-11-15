@@ -1,0 +1,78 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - gocritic
+    - gosec
+    - unconvert
+    - prealloc
+    - copyloopvar
+    - goconst
+    - gocognit
+    - dupl
+    - bodyclose
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - gochecknoinits
+    - gochecknoglobals
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+  gosec:
+    severity: medium
+    confidence: medium
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  gocognit:
+    min-complexity: 15
+
+  misspell:
+    locale: US
+
+issues:
+  exclude-dirs:
+    - examples
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - dupl
+        - gocognit
+  max-issues-per-linter: 0
+  max-same-issues: 0

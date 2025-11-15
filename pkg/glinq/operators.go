@@ -1,9 +1,9 @@
 package glinq
 
-// Where фильтрует элементы по предикату.
-func (s *Stream[T]) Where(predicate func(T) bool) *Stream[T] {
+// Where filters elements by predicate.
+func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 	oldSource := s.source
-	return &Stream[T]{
+	return &stream[T]{
 		source: func() (T, bool) {
 			for {
 				value, ok := oldSource()
@@ -19,17 +19,18 @@ func (s *Stream[T]) Where(predicate func(T) bool) *Stream[T] {
 	}
 }
 
-// Select преобразует элементы в тот же тип.
-// Поддерживает цепочки вызовов (chaining).
+// Select transforms elements to the same type.
+// Supports method chaining.
 //
-// Пример:
-//   doubled := From([]int{1, 2, 3}).
-//       Select(func(x int) int { return x * 2 }).
-//       ToSlice()
-//   // []int{2, 4, 6}
-func (s *Stream[T]) Select(mapper func(T) T) *Stream[T] {
+// Example:
+//
+//	doubled := From([]int{1, 2, 3}).
+//	    Select(func(x int) int { return x * 2 }).
+//	    ToSlice()
+//	// []int{2, 4, 6}
+func (s *stream[T]) Select(mapper func(T) T) Stream[T] {
 	oldSource := s.source
-	return &Stream[T]{
+	return &stream[T]{
 		source: func() (T, bool) {
 			value, ok := oldSource()
 			if !ok {
@@ -41,20 +42,20 @@ func (s *Stream[T]) Select(mapper func(T) T) *Stream[T] {
 	}
 }
 
-// Map преобразует элементы в другой тип.
-// Это функция (не метод), так как в Go методы не могут иметь собственные type parameters.
+// Map transforms elements to a different type.
+// This is a function (not a method) because in Go methods cannot have their own type parameters.
 //
-// Пример:
-//   strings := Map(
-//       From([]int{1, 2, 3}),
-//       func(x int) string { return fmt.Sprintf("num_%d", x) },
-//   ).ToSlice()
-//   // []string{"num_1", "num_2", "num_3"}
-func Map[T, R any](s *Stream[T], mapper func(T) R) *Stream[R] {
-	oldSource := s.source
-	return &Stream[R]{
+// Example:
+//
+//	strings := Map(
+//	    From([]int{1, 2, 3}),
+//	    func(x int) string { return fmt.Sprintf("num_%d", x) },
+//	).ToSlice()
+//	// []string{"num_1", "num_2", "num_3"}
+func Map[T, R any](s Stream[T], mapper func(T) R) Stream[R] {
+	return &stream[R]{
 		source: func() (R, bool) {
-			value, ok := oldSource()
+			value, ok := s.Next()
 			if !ok {
 				var zero R
 				return zero, false
@@ -64,11 +65,11 @@ func Map[T, R any](s *Stream[T], mapper func(T) R) *Stream[R] {
 	}
 }
 
-// Take берет первые n элементов из Stream.
-func (s *Stream[T]) Take(n int) *Stream[T] {
+// Take takes the first n elements from Stream.
+func (s *stream[T]) Take(n int) Stream[T] {
 	oldSource := s.source
 	count := 0
-	return &Stream[T]{
+	return &stream[T]{
 		source: func() (T, bool) {
 			if count >= n {
 				var zero T
@@ -85,11 +86,11 @@ func (s *Stream[T]) Take(n int) *Stream[T] {
 	}
 }
 
-// Skip пропускает первые n элементов из Stream.
-func (s *Stream[T]) Skip(n int) *Stream[T] {
+// Skip skips the first n elements from Stream.
+func (s *stream[T]) Skip(n int) Stream[T] {
 	oldSource := s.source
 	skipped := 0
-	return &Stream[T]{
+	return &stream[T]{
 		source: func() (T, bool) {
 			for skipped < n {
 				_, ok := oldSource()

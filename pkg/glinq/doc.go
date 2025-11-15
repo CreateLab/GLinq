@@ -1,10 +1,10 @@
-// Package glinq предоставляет LINQ-подобный API для Go с поддержкой отложенного выполнения (lazy evaluation).
+// Package glinq provides a LINQ-like API for Go with support for lazy evaluation.
 //
-// glinq позволяет работать со слайсами и картами, используя функциональный стиль программирования.
-// Все операции (Where, Select, Take, Skip) выполняются лениво и не начинаются до вызова терминальной
-// операции (ToSlice, First, Count, Any, All, ForEach).
+// glinq allows working with slices and maps using a functional programming style.
+// All operations (Where, Select, Take, Skip) are executed lazily and do not start until a terminal
+// operation (ToSlice, First, Count, Any, All, ForEach) is called.
 //
-// Пример использования:
+// Example usage:
 //
 //	numbers := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 //	result := glinq.From(numbers).
@@ -13,30 +13,30 @@
 //		ToSlice()
 //	// result: [12, 14, 16, 18, 20]
 //
-// Поддерживаемые операции:
+// Supported operations:
 //
-// Создатели (создают Stream):
-//   - From: из слайса
-//   - Empty: пустой Stream
-//   - Range: поток целых чисел
-//   - FromMap: из карты (возвращает KeyValue пары)
+// Creators (create Stream):
+//   - From: from a slice
+//   - Empty: empty Stream
+//   - Range: stream of integers
+//   - FromMap: from a map (returns KeyValue pairs)
 //
-// Операторы (преобразуют Stream):
-//   - Where: фильтрация по предикату
-//   - Select: преобразование элементов
-//   - Take: первые n элементов
-//   - Skip: пропуск первых n элементов
+// Operators (transform Stream):
+//   - Where: filter by predicate
+//   - Select: transform elements
+//   - Take: first n elements
+//   - Skip: skip first n elements
 //
-// Терминальные операции (материализуют результат):
-//   - ToSlice: преобразование в слайс
-//   - First: первый элемент
-//   - Count: количество элементов
-//   - Any: проверка наличия элемента
-//   - All: проверка всех элементов
-//   - ForEach: выполнение действия для каждого элемента
+// Terminal operations (materialize result):
+//   - ToSlice: convert to slice
+//   - First: first element
+//   - Count: number of elements
+//   - Any: check if any element exists
+//   - All: check if all elements satisfy condition
+//   - ForEach: execute action for each element
 //
-// Вспомогательные функции для работы с KeyValue:
-//   - Keys: извлечение ключей
-//   - Values: извлечение значений
-//   - ToMap: преобразование в карту
+// Helper functions for working with KeyValue:
+//   - Keys: extract keys
+//   - Values: extract values
+//   - ToMap: convert to map
 package glinq
