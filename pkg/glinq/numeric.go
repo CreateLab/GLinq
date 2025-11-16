@@ -15,18 +15,18 @@ type Ordered interface {
 		~string
 }
 
-// Sum calculates the sum of all elements in the Stream.
-// Returns zero value if Stream is empty.
+// Sum calculates the sum of all elements in the Enumerable.
+// Returns zero value if Enumerable is empty.
 //
 // Example:
 //
 //	numbers := []int{1, 2, 3, 4, 5}
 //	sum := Sum(From(numbers))
 //	// 15
-func Sum[T Numeric](s Stream[T]) T {
+func Sum[T Numeric](enum Enumerable[T]) T {
 	var sum T
 	for {
-		value, ok := s.Next()
+		value, ok := enum.Next()
 		if !ok {
 			break
 		}
@@ -35,20 +35,20 @@ func Sum[T Numeric](s Stream[T]) T {
 	return sum
 }
 
-// Min returns the minimum element in the Stream.
-// Returns zero value and false if Stream is empty.
+// Min returns the minimum element in the Enumerable.
+// Returns zero value and false if Enumerable is empty.
 //
 // Example:
 //
 //	numbers := []int{5, 2, 8, 1, 9}
 //	min, ok := Min(From(numbers))
 //	// min = 1, ok = true
-func Min[T Ordered](s Stream[T]) (T, bool) {
+func Min[T Ordered](enum Enumerable[T]) (T, bool) {
 	var minVal T
 	var found bool
 
 	for {
-		value, ok := s.Next()
+		value, ok := enum.Next()
 		if !ok {
 			break
 		}
@@ -61,20 +61,20 @@ func Min[T Ordered](s Stream[T]) (T, bool) {
 	return minVal, found
 }
 
-// Max returns the maximum element in the Stream.
-// Returns zero value and false if Stream is empty.
+// Max returns the maximum element in the Enumerable.
+// Returns zero value and false if Enumerable is empty.
 //
 // Example:
 //
 //	numbers := []int{5, 2, 8, 1, 9}
 //	max, ok := Max(From(numbers))
 //	// max = 9, ok = true
-func Max[T Ordered](s Stream[T]) (T, bool) {
+func Max[T Ordered](enum Enumerable[T]) (T, bool) {
 	var maxVal T
 	var found bool
 
 	for {
-		value, ok := s.Next()
+		value, ok := enum.Next()
 		if !ok {
 			break
 		}

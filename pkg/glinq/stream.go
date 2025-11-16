@@ -1,10 +1,15 @@
 package glinq
 
-// Stream represents a lazy sequence of elements.
-// Elements are provided through a source function that returns (element, has_element).
-type Stream[T any] interface {
+// Enumerable is the minimal interface for iterable collections.
+// Any type that can provide a sequence of elements.
+type Enumerable[T any] interface {
 	// Next returns the next element and true, or zero value and false if there are no more elements.
 	Next() (T, bool)
+}
+
+// Stream extends Enumerable and adds operators for working with sequences.
+type Stream[T any] interface {
+	Enumerable[T] // Embed Enumerable
 	// Where filters elements by predicate.
 	Where(predicate func(T) bool) Stream[T]
 	// Select transforms elements to the same type.
@@ -41,6 +46,46 @@ type Stream[T any] interface {
 	// The seed parameter is the initial accumulator value.
 	// The accumulator function is invoked for each element.
 	Aggregate(seed T, accumulator func(T, T) T) T
+	// OrderBy sorts elements using a comparator function.
+	// Comparator should return: negative value if a < b,
+	// 0 if a == b, positive if a > b.
+	// NOTE: OrderBy materializes the entire stream for sorting (partially lazy).
+	//
+	// Example:
+	//   sorted := From([]int{5, 2, 8}).
+	//       OrderBy(func(a, b int) int { return a - b }).
+	//       ToSlice()
+	//   // [2, 5, 8]
+	OrderBy(comparator func(T, T) int) Stream[T]
+	// OrderByDescending sorts elements in reverse order.
+	// This is a shortcut for OrderBy with inverted comparator.
+	//
+	// Example:
+	//   sorted := From([]int{5, 2, 8}).
+	//       OrderByDescending(func(a, b int) int { return a - b }).
+	//       ToSlice()
+	//   // [8, 5, 2]
+	OrderByDescending(comparator func(T, T) int) Stream[T]
+	// DistinctBy removes duplicates by key extracted by keySelector.
+	// keySelector should return a comparable value.
+	// RUNTIME REQUIREMENT: returned value must be comparable,
+	// otherwise panic will occur.
+	//
+	// Example:
+	//   type Person struct { ID int; Name string }
+	//   unique := From(people).
+	//       DistinctBy(func(p Person) any { return p.ID }).
+	//       ToSlice()
+	DistinctBy(keySelector func(T) any) Stream[T]
+	// Concat concatenates the current Stream with another Enumerable, preserving duplicates.
+	// Elements from the current Stream come first, then elements from other.
+	//
+	// Example:
+	//   result := From([]int{1, 2}).
+	//       Concat(From([]int{2, 3})).
+	//       ToSlice()
+	//   // [1, 2, 2, 3]
+	Concat(other Enumerable[T]) Stream[T]
 }
 
 // stream represents the internal implementation of Stream.
@@ -94,7 +139,14 @@ func Range(start, count int) Stream[int] {
 	}
 }
 
-// Next returns the next element from stream.
+// Next implements Enumerable
 func (s *stream[T]) Next() (T, bool) {
 	return s.source()
+}
+
+// FromEnumerable creates a Stream from any Enumerable.
+func FromEnumerable[T any](enum Enumerable[T]) Stream[T] {
+	return &stream[T]{
+		source: enum.Next,
+	}
 }

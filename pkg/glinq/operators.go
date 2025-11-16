@@ -1,5 +1,7 @@
 package glinq
 
+import "sort"
+
 // Where filters elements by predicate.
 func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 	oldSource := s.source
@@ -78,10 +80,10 @@ func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
 //	    func(x int) string { return fmt.Sprintf("num_%d", x) },
 //	).ToSlice()
 //	// []string{"num_1", "num_2", "num_3"}
-func Select[T, R any](s Stream[T], mapper func(T) R) Stream[R] {
+func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 	return &stream[R]{
 		source: func() (R, bool) {
-			value, ok := s.Next()
+			value, ok := enum.Next()
 			if !ok {
 				var zero R
 				return zero, false
@@ -101,11 +103,11 @@ func Select[T, R any](s Stream[T], mapper func(T) R) Stream[R] {
 //	    func(x int, idx int) string { return fmt.Sprintf("num_%d_at_%d", x, idx) },
 //	).ToSlice()
 //	// []string{"num_1_at_0", "num_2_at_1", "num_3_at_2"}
-func SelectWithIndex[T, R any](s Stream[T], mapper func(T, int) R) Stream[R] {
+func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream[R] {
 	index := 0
 	return &stream[R]{
 		source: func() (R, bool) {
-			value, ok := s.Next()
+			value, ok := enum.Next()
 			if !ok {
 				var zero R
 				return zero, false
@@ -157,156 +159,97 @@ func (s *stream[T]) Skip(n int) Stream[T] {
 	}
 }
 
-// TakeOrderedBy takes the first n smallest elements from Stream using comparator function.
-// Uses a buffer of size n to keep track of the n smallest elements.
-// Stream is read lazily, and only the buffer is sorted before being returned.
-// This is a function (not a method) because in Go methods cannot have their own type parameters.
-//
-// Example:
-//
-//	type Person struct { Age int; Name string }
-//	people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}, {Age: 35, Name: "Charlie"}}
-//	result := TakeOrderedBy(
-//	    From(people),
-//	    2,
-//	    func(a, b Person) bool { return a.Age < b.Age },
-//	).ToSlice()
-//	// []Person{{Age: 25, Name: "Bob"}, {Age: 30, Name: "Alice"}}
-func TakeOrderedBy[T any](s Stream[T], n int, less func(a, b T) bool) Stream[T] {
-	if n <= 0 {
-		return Empty[T]()
-	}
-
-	var buf []T
-	var result []T
-	var materialized bool
-
-	return &stream[T]{
-		source: func() (T, bool) {
-			if !materialized {
-				// Materialize stream and build buffer
-				for {
-					value, ok := s.Next()
-					if !ok {
-						break
-					}
-
-					if len(buf) < n {
-						buf = append(buf, value)
-					} else {
-						// Find maximum element in buffer (according to less)
-						maxIdx := 0
-						for i := 1; i < len(buf); i++ {
-							if less(buf[maxIdx], buf[i]) {
-								maxIdx = i
-							}
-						}
-						// Replace if current value is smaller (according to less)
-						if less(value, buf[maxIdx]) {
-							buf[maxIdx] = value
-						}
-					}
-				}
-
-				// Sort buffer in ascending order using less function
-				result = make([]T, len(buf))
-				copy(result, buf)
-				for i := 0; i < len(result); i++ {
-					for j := i + 1; j < len(result); j++ {
-						if less(result[j], result[i]) {
-							result[i], result[j] = result[j], result[i]
-						}
-					}
-				}
-
-				materialized = true
-			}
-
-			if len(result) == 0 {
-				var zero T
-				return zero, false
-			}
-
-			value := result[0]
-			result = result[1:]
-			return value, true
-		},
+// buildHeap is a helper function for building a heap.
+func buildHeap[T any](items []T, less func(a, b T) bool) {
+	n := len(items)
+	for i := n/2 - 1; i >= 0; i-- {
+		heapifyDown(items, i, n, less)
 	}
 }
 
-// TakeOrderedDescendingBy takes the first n largest elements from Stream using comparator function.
-// Uses a buffer of size n to keep track of the n largest elements.
-// Stream is read lazily, and only the buffer is sorted before being returned.
-// This is a function (not a method) because in Go methods cannot have their own type parameters.
+// heapifyDown performs heapify down operation (sift down).
+func heapifyDown[T any](items []T, i, n int, less func(a, b T) bool) {
+	for {
+		largest := i
+		left := 2*i + 1
+		right := 2*i + 2
+
+		if left < n && less(items[largest], items[left]) {
+			largest = left
+		}
+		if right < n && less(items[largest], items[right]) {
+			largest = right
+		}
+
+		if largest == i {
+			break
+		}
+
+		items[i], items[largest] = items[largest], items[i]
+		i = largest
+	}
+}
+
+// TakeOrderedBy returns the first n elements ordered by the less function.
+// Uses a heap-based algorithm for efficient processing.
 //
 // Example:
 //
-//	type Person struct { Age int; Name string }
-//	people := []Person{{Age: 30, Name: "Alice"}, {Age: 25, Name: "Bob"}, {Age: 35, Name: "Charlie"}}
-//	result := TakeOrderedDescendingBy(
-//	    From(people),
-//	    2,
-//	    func(a, b Person) bool { return a.Age < b.Age },
-//	).ToSlice()
-//	// []Person{{Age: 35, Name: "Charlie"}, {Age: 30, Name: "Alice"}}
-func TakeOrderedDescendingBy[T any](s Stream[T], n int, less func(a, b T) bool) Stream[T] {
+//	numbers := []int{5, 2, 8, 1, 9, 3}
+//	top3 := TakeOrderedBy(From(numbers), 3, func(a, b int) bool { return a < b })
+//	// Returns the 3 smallest elements: [1, 2, 3]
+func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Stream[T] {
 	if n <= 0 {
 		return Empty[T]()
 	}
 
-	var buf []T
-	var result []T
-	var materialized bool
+	var heap []T
 
-	return &stream[T]{
-		source: func() (T, bool) {
-			if !materialized {
-				// Materialize stream and build buffer
-				for {
-					value, ok := s.Next()
-					if !ok {
-						break
-					}
-
-					if len(buf) < n {
-						buf = append(buf, value)
-					} else {
-						// Find minimum element in buffer (according to less)
-						minIdx := 0
-						for i := 1; i < len(buf); i++ {
-							if less(buf[i], buf[minIdx]) {
-								minIdx = i
-							}
-						}
-						// Replace if current value is larger (according to less)
-						if less(buf[minIdx], value) {
-							buf[minIdx] = value
-						}
-					}
-				}
-
-				// Sort buffer in descending order using less function
-				result = make([]T, len(buf))
-				copy(result, buf)
-				for i := 0; i < len(result); i++ {
-					for j := i + 1; j < len(result); j++ {
-						if less(result[i], result[j]) {
-							result[i], result[j] = result[j], result[i]
-						}
-					}
-				}
-
-				materialized = true
-			}
-
-			if len(result) == 0 {
-				var zero T
-				return zero, false
-			}
-
-			value := result[0]
-			result = result[1:]
-			return value, true
-		},
+	// Collect first n elements
+	for i := 0; i < n; i++ {
+		val, ok := enum.Next()
+		if !ok {
+			break
+		}
+		heap = append(heap, val)
 	}
+
+	if len(heap) == 0 {
+		return Empty[T]()
+	}
+
+	// Build max-heap
+	buildHeap(heap, func(a, b T) bool { return !less(a, b) })
+
+	// Process remaining elements
+	for {
+		val, ok := enum.Next()
+		if !ok {
+			break
+		}
+
+		if less(val, heap[0]) {
+			heap[0] = val
+			heapifyDown(heap, 0, len(heap), func(a, b T) bool { return !less(a, b) })
+		}
+	}
+
+	// Sort the result
+	sort.Slice(heap, func(i, j int) bool {
+		return less(heap[i], heap[j])
+	})
+
+	return From(heap)
+}
+
+// TakeOrderedDescendingBy returns the first n elements ordered in descending order by the less function.
+// This is equivalent to TakeOrderedBy with inverted comparator.
+//
+// Example:
+//
+//	numbers := []int{5, 2, 8, 1, 9, 3}
+//	top3 := TakeOrderedDescendingBy(From(numbers), 3, func(a, b int) bool { return a < b })
+//	// Returns the 3 largest elements: [9, 8, 5]
+func TakeOrderedDescendingBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Stream[T] {
+	return TakeOrderedBy(enum, n, func(a, b T) bool { return !less(a, b) })
 }

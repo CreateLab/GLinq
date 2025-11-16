@@ -211,7 +211,7 @@ func (s *stream[T]) Aggregate(seed T, accumulator func(T, T) T) T {
 	return result
 }
 
-// ToMapBy materializes Stream[T] into a map using selectors for key and value.
+// ToMapBy materializes Enumerable[T] into a map using selectors for key and value.
 //
 // Example:
 //
@@ -224,13 +224,13 @@ func (s *stream[T]) Aggregate(seed T, accumulator func(T, T) T) T {
 //	)
 //	// map[int]string{1: "Alice", 2: "Bob"}
 func ToMapBy[T any, K comparable, V any](
-	s Stream[T],
+	enum Enumerable[T],
 	keySelector func(T) K,
 	valueSelector func(T) V,
 ) map[K]V {
 	result := make(map[K]V)
 	for {
-		item, ok := s.Next()
+		item, ok := enum.Next()
 		if !ok {
 			break
 		}

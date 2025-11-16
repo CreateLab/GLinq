@@ -9,7 +9,7 @@ type KeyValue[K comparable, V any] struct {
 // FromMap creates a Stream from a map.
 func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 	// Convert map to slice of pairs
-	pairs := make([]KeyValue[K, V], 0, len(m)) // предварительная аллокация
+	pairs := make([]KeyValue[K, V], 0, len(m)) // pre-allocate capacity
 	for key, value := range m {
 		pairs = append(pairs, KeyValue[K, V]{Key: key, Value: value})
 	}
@@ -27,11 +27,11 @@ func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 	}
 }
 
-// Keys extracts only keys from Stream[KeyValue].
-func Keys[K comparable, V any](s Stream[KeyValue[K, V]]) Stream[K] {
+// Keys extracts only keys from Enumerable[KeyValue].
+func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
 	return &stream[K]{
 		source: func() (K, bool) {
-			kv, ok := s.Next()
+			kv, ok := enum.Next()
 			if !ok {
 				var zero K
 				return zero, false
@@ -41,11 +41,11 @@ func Keys[K comparable, V any](s Stream[KeyValue[K, V]]) Stream[K] {
 	}
 }
 
-// Values extracts only values from Stream[KeyValue].
-func Values[K comparable, V any](s Stream[KeyValue[K, V]]) Stream[V] {
+// Values extracts only values from Enumerable[KeyValue].
+func Values[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[V] {
 	return &stream[V]{
 		source: func() (V, bool) {
-			kv, ok := s.Next()
+			kv, ok := enum.Next()
 			if !ok {
 				var zero V
 				return zero, false
@@ -55,11 +55,11 @@ func Values[K comparable, V any](s Stream[KeyValue[K, V]]) Stream[V] {
 	}
 }
 
-// ToMap materializes Stream[KeyValue] back into a map.
-func ToMap[K comparable, V any](s Stream[KeyValue[K, V]]) map[K]V {
+// ToMap materializes Enumerable[KeyValue] back into a map.
+func ToMap[K comparable, V any](enum Enumerable[KeyValue[K, V]]) map[K]V {
 	result := make(map[K]V)
 	for {
-		kv, ok := s.Next()
+		kv, ok := enum.Next()
 		if !ok {
 			break
 		}
