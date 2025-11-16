@@ -2,9 +2,6 @@
 
 LINQ-like API for Go with support for lazy evaluation.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/CreateLab/glinq.svg)](https://pkg.go.dev/github.com/CreateLab/glinq)
-[![Go Report Card](https://goreportcard.com/badge/github.com/CreateLab/glinq)](https://goreportcard.com/report/github.com/CreateLab/glinq)
-
 ## Features
 
 - **Lazy Evaluation**: All intermediate operations are executed only when the result is materialized
