@@ -131,4 +131,4 @@ go run examples/basic/main.go
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
