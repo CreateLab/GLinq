@@ -253,3 +253,56 @@ func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Str
 func TakeOrderedDescendingBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Stream[T] {
 	return TakeOrderedBy(enum, n, func(a, b T) bool { return !less(a, b) })
 }
+
+// Reverse reverses the order of elements in the Stream.
+// NOTE: Reverse materializes the entire stream (partially lazy).
+func (s *stream[T]) Reverse() Stream[T] {
+	items := s.ToSlice()
+	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
+		items[i], items[j] = items[j], items[i]
+	}
+	return From(items)
+}
+
+// SelectMany transforms each element into a sequence and flattens the resulting sequences.
+// This is a function (not a method) because in Go methods cannot have their own type parameters.
+//
+// Example:
+//
+//	numbers := [][]int{{1, 2}, {3, 4}, {5}}
+//	flattened := SelectMany(
+//	    From(numbers),
+//	    func(slice []int) Enumerable[int] { return From(slice) },
+//	).ToSlice()
+//	// [1, 2, 3, 4, 5]
+func SelectMany[T, R any](enum Enumerable[T], selector func(T) Enumerable[R]) Stream[R] {
+	var currentEnum Enumerable[R]
+	var hasCurrent bool
+
+	return &stream[R]{
+		source: func() (R, bool) {
+			for {
+				// If we have a current enumerable, try to get next element from it
+				if hasCurrent {
+					val, ok := currentEnum.Next()
+					if ok {
+						return val, true
+					}
+					// Current enumerable exhausted, move to next
+					hasCurrent = false
+				}
+
+				// Get next element from source
+				elem, ok := enum.Next()
+				if !ok {
+					var zero R
+					return zero, false
+				}
+
+				// Transform element into enumerable
+				currentEnum = selector(elem)
+				hasCurrent = true
+			}
+		},
+	}
+}

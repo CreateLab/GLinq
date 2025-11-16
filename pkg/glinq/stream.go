@@ -86,6 +86,15 @@ type Stream[T any] interface {
 	//       ToSlice()
 	//   // [1, 2, 2, 3]
 	Concat(other Enumerable[T]) Stream[T]
+	// Reverse reverses the order of elements in the Stream.
+	// NOTE: Reverse materializes the entire stream (partially lazy).
+	//
+	// Example:
+	//   reversed := From([]int{1, 2, 3, 4}).
+	//       Reverse().
+	//       ToSlice()
+	//   // [4, 3, 2, 1]
+	Reverse() Stream[T]
 }
 
 // stream represents the internal implementation of Stream.

@@ -26,8 +26,9 @@ result := glinq.From([]int{1, 2, 3, 4, 5}).
 
 - **Stream Creation**: `From`, `Empty`, `Range`, `FromEnumerable`
 - **Filtering**: `Where`, `DistinctBy`, `Take`, `Skip`
-- **Transformation**: `Select`, `SelectWithIndex`
-- **Ordering**: `OrderBy`, `OrderByDescending`
+- **Transformation**: `Select`, `SelectWithIndex`, `SelectMany`
+- **Ordering**: `OrderBy`, `OrderByDescending`, `Reverse`
+- **Grouping**: `GroupBy`
 - **Terminal**: `ToSlice`, `First`, `Count`, `Any`, `All`, `Aggregate`, `ForEach`
 
 See [package documentation](https://github.com/CreateLab/GLinq) for full API reference.

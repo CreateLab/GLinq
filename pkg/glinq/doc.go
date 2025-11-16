@@ -26,6 +26,9 @@
 //   - Select: transform elements
 //   - Take: first n elements
 //   - Skip: skip first n elements
+//   - Reverse: reverse order of elements (materializes stream)
+//   - SelectMany: flatten sequences (function, not method)
+//   - GroupBy: group elements by key (function, returns KeyValue pairs)
 //
 // Terminal operations (materialize result):
 //   - ToSlice: convert to slice
@@ -39,4 +42,5 @@
 //   - Keys: extract keys
 //   - Values: extract values
 //   - ToMap: convert to map
+//   - GroupBy: group elements by key selector
 package glinq

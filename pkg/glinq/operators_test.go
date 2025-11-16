@@ -248,3 +248,106 @@ func TestSelectWithIndexFunction(t *testing.T) {
 		}
 	})
 }
+
+func TestReverse(t *testing.T) {
+	t.Run("Reverse integers", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		result := From(input).Reverse().ToSlice()
+
+		expected := []int{5, 4, 3, 2, 1}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+
+	t.Run("Reverse with chaining", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		result := From(input).
+			Where(func(x int) bool { return x > 2 }).
+			Reverse().
+			ToSlice()
+
+		expected := []int{5, 4, 3}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+
+	t.Run("Reverse empty stream", func(t *testing.T) {
+		result := Empty[int]().Reverse().ToSlice()
+
+		if len(result) != 0 {
+			t.Errorf("Expected empty slice, got %v", result)
+		}
+	})
+
+	t.Run("Reverse single element", func(t *testing.T) {
+		input := []int{42}
+		result := From(input).Reverse().ToSlice()
+
+		expected := []int{42}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+}
+
+func TestSelectMany(t *testing.T) {
+	t.Run("Flatten slices", func(t *testing.T) {
+		input := [][]int{{1, 2}, {3, 4}, {5}}
+		result := SelectMany(
+			From(input),
+			func(slice []int) Enumerable[int] { return From(slice) },
+		).ToSlice()
+
+		expected := []int{1, 2, 3, 4, 5}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+
+	t.Run("Flatten with empty slices", func(t *testing.T) {
+		input := [][]int{{1, 2}, {}, {3, 4}, {}}
+		result := SelectMany(
+			From(input),
+			func(slice []int) Enumerable[int] { return From(slice) },
+		).ToSlice()
+
+		expected := []int{1, 2, 3, 4}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+
+	t.Run("Flatten strings", func(t *testing.T) {
+		input := []string{"hello", "world"}
+		result := SelectMany(
+			From(input),
+			func(s string) Enumerable[rune] {
+				runes := make([]rune, len(s))
+				for i, r := range s {
+					runes[i] = r
+				}
+				return From(runes)
+			},
+		).ToSlice()
+
+		expected := []rune{'h', 'e', 'l', 'l', 'o', 'w', 'o', 'r', 'l', 'd'}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+
+	t.Run("SelectMany with chaining", func(t *testing.T) {
+		input := [][]int{{1, 2, 3}, {4, 5}, {6, 7, 8}}
+		result := SelectMany(
+			From(input),
+			func(slice []int) Enumerable[int] { return From(slice) },
+		).Where(func(x int) bool { return x%2 == 0 }).ToSlice()
+
+		expected := []int{2, 4, 6, 8}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("Expected %v, got %v", expected, result)
+		}
+	})
+}
