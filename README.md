@@ -202,6 +202,18 @@ go test -bench=BenchmarkFrom -benchmem ./pkg/glinq/...
 
 - Go 1.18+ (for generics support)
 
+## Comparison with Similar Libraries
+
+| Feature | glinq | [samber/lo](https://github.com/samber/lo) | [thoas/go-funk](https://github.com/thoas/go-funk) |
+|---------|-------|-----------|----------|
+| **Evaluation** | Lazy (deferred) | Eager (immediate) | Eager (immediate) |
+| **API Style** | Fluent/Chainable | Functional | Functional |
+| **Type Safety** | Full (generics) | Full (generics) | Runtime (reflection) |
+| **Performance** | Single pass, no intermediate arrays | Creates intermediate arrays | Slower due to reflection |
+| **Memory Usage** | Minimal (lazy) | Higher (eager) | Higher (eager + reflection) |
+| **Extensibility** | Interface-based (Enumerable/Stream) | None | None |
+| **Dependencies** | Zero | Zero | Zero |
+
 ## Testing
 
 ```bash
