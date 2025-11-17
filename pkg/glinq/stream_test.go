@@ -91,3 +91,68 @@ func TestFromSafeCopy(t *testing.T) {
 		t.Errorf("Expected [1, 2, 3], got %v", result)
 	}
 }
+
+// TestStreamReusability проверяет что стримы можно переиспользовать
+func TestStreamReusability(t *testing.T) {
+	data := []int{1, 2, 3, 4, 5}
+	stream := From(data)
+
+	// Первое использование - Count
+	count1 := stream.Count()
+	if count1 != 5 {
+		t.Errorf("Expected count 5, got %d", count1)
+	}
+
+	// Второе использование - ToSlice
+	slice := stream.ToSlice()
+	if len(slice) != 5 {
+		t.Errorf("Expected length 5, got %d", len(slice))
+	}
+	for i, v := range slice {
+		if v != data[i] {
+			t.Errorf("Expected %d, got %d at index %d", data[i], v, i)
+		}
+	}
+
+	// Третье использование - First
+	first, ok := stream.First()
+	if !ok || first != 1 {
+		t.Errorf("Expected first element 1, got %d, ok=%v", first, ok)
+	}
+
+	// Четвертое использование - Count снова
+	count2 := stream.Count()
+	if count2 != 5 {
+		t.Errorf("Expected count 5, got %d", count2)
+	}
+}
+
+// TestStreamReusabilityWithOperators проверяет переиспользование стримов с операторами
+func TestStreamReusabilityWithOperators(t *testing.T) {
+	data := []int{1, 2, 3, 4, 5}
+	query := From(data).Where(func(x int) bool { return x%2 == 0 })
+
+	// Первое использование
+	evens1 := query.ToSlice()
+	expected := []int{2, 4}
+	if len(evens1) != len(expected) {
+		t.Errorf("Expected length %d, got %d", len(expected), len(evens1))
+	}
+	for i, v := range evens1 {
+		if v != expected[i] {
+			t.Errorf("Expected %d, got %d at index %d", expected[i], v, i)
+		}
+	}
+
+	// Второе использование
+	count := query.Count()
+	if count != 2 {
+		t.Errorf("Expected count 2, got %d", count)
+	}
+
+	// Третье использование
+	evens2 := query.ToSlice()
+	if len(evens2) != len(expected) {
+		t.Errorf("Expected length %d, got %d", len(expected), len(evens2))
+	}
+}

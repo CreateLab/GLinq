@@ -99,7 +99,8 @@ type Stream[T any] interface {
 
 // stream represents the internal implementation of Stream.
 type stream[T any] struct {
-	source func() (T, bool)
+	sourceFactory   func() func() (T, bool)
+	currentIterator func() (T, bool) // For Enumerable.Next()
 }
 
 // From creates a Stream from a slice.
@@ -116,16 +117,18 @@ type stream[T any] struct {
 //	stream := From(numbers)
 //	// Efficient - no copying!
 func From[T any](slice []T) Stream[T] {
-	index := 0
 	return &stream[T]{
-		source: func() (T, bool) {
-			if index < len(slice) {
+		sourceFactory: func() func() (T, bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (T, bool) {
+				if index >= len(slice) {
+					var zero T
+					return zero, false
+				}
 				result := slice[index]
 				index++
 				return result, true
 			}
-			var zero T
-			return zero, false
 		},
 	}
 }
@@ -148,16 +151,18 @@ func FromSafe[T any](slice []T) Stream[T] {
 	data := make([]T, len(slice))
 	copy(data, slice)
 
-	index := 0
 	return &stream[T]{
-		source: func() (T, bool) {
-			if index < len(data) {
+		sourceFactory: func() func() (T, bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (T, bool) {
+				if index >= len(data) {
+					var zero T
+					return zero, false
+				}
 				result := data[index]
 				index++
 				return result, true
 			}
-			var zero T
-			return zero, false
 		},
 	}
 }
@@ -165,36 +170,45 @@ func FromSafe[T any](slice []T) Stream[T] {
 // Empty creates an empty Stream that contains no elements.
 func Empty[T any]() Stream[T] {
 	return &stream[T]{
-		source: func() (T, bool) {
-			var zero T
-			return zero, false
+		sourceFactory: func() func() (T, bool) {
+			return func() (T, bool) {
+				var zero T
+				return zero, false
+			}
 		},
 	}
 }
 
 // Range creates a Stream of integers from start to start+count-1.
 func Range(start, count int) Stream[int] {
-	index := 0
 	return &stream[int]{
-		source: func() (int, bool) {
-			if index < count {
+		sourceFactory: func() func() (int, bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (int, bool) {
+				if index >= count {
+					return 0, false
+				}
 				result := start + index
 				index++
 				return result, true
 			}
-			return 0, false
 		},
 	}
 }
 
 // Next implements Enumerable
 func (s *stream[T]) Next() (T, bool) {
-	return s.source()
+	if s.currentIterator == nil {
+		s.currentIterator = s.sourceFactory()
+	}
+	return s.currentIterator()
 }
 
 // FromEnumerable creates a Stream from any Enumerable.
 func FromEnumerable[T any](enum Enumerable[T]) Stream[T] {
 	return &stream[T]{
-		source: enum.Next,
+		sourceFactory: func() func() (T, bool) {
+			return enum.Next
+		},
 	}
 }

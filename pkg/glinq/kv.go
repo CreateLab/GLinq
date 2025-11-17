@@ -27,17 +27,19 @@ func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 		keys = append(keys, key)
 	}
 
-	index := 0
 	return &stream[KeyValue[K, V]]{
-		source: func() (KeyValue[K, V], bool) {
-			if index < len(keys) {
+		sourceFactory: func() func() (KeyValue[K, V], bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (KeyValue[K, V], bool) {
+				if index >= len(keys) {
+					return KeyValue[K, V]{}, false
+				}
 				key := keys[index]
 				// Read value from map on-demand
 				value := m[key]
 				index++
 				return KeyValue[K, V]{Key: key, Value: value}, true
 			}
-			return KeyValue[K, V]{}, false
 		},
 	}
 }
@@ -62,15 +64,17 @@ func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 		pairs = append(pairs, KeyValue[K, V]{Key: key, Value: value})
 	}
 
-	index := 0
 	return &stream[KeyValue[K, V]]{
-		source: func() (KeyValue[K, V], bool) {
-			if index < len(pairs) {
+		sourceFactory: func() func() (KeyValue[K, V], bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (KeyValue[K, V], bool) {
+				if index >= len(pairs) {
+					return KeyValue[K, V]{}, false
+				}
 				result := pairs[index]
 				index++
 				return result, true
 			}
-			return KeyValue[K, V]{}, false
 		},
 	}
 }
@@ -78,13 +82,15 @@ func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 // Keys extracts only keys from Enumerable[KeyValue].
 func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
 	return &stream[K]{
-		source: func() (K, bool) {
-			kv, ok := enum.Next()
-			if !ok {
-				var zero K
-				return zero, false
+		sourceFactory: func() func() (K, bool) {
+			return func() (K, bool) {
+				kv, ok := enum.Next()
+				if !ok {
+					var zero K
+					return zero, false
+				}
+				return kv.Key, true
 			}
-			return kv.Key, true
 		},
 	}
 }
@@ -92,13 +98,15 @@ func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
 // Values extracts only values from Enumerable[KeyValue].
 func Values[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[V] {
 	return &stream[V]{
-		source: func() (V, bool) {
-			kv, ok := enum.Next()
-			if !ok {
-				var zero V
-				return zero, false
+		sourceFactory: func() func() (V, bool) {
+			return func() (V, bool) {
+				kv, ok := enum.Next()
+				if !ok {
+					var zero V
+					return zero, false
+				}
+				return kv.Value, true
 			}
-			return kv.Value, true
 		},
 	}
 }
@@ -150,15 +158,17 @@ func GroupBy[T any, K comparable](enum Enumerable[T], keySelector func(T) K) Str
 		pairs = append(pairs, KeyValue[K, []T]{Key: key, Value: values})
 	}
 
-	index := 0
 	return &stream[KeyValue[K, []T]]{
-		source: func() (KeyValue[K, []T], bool) {
-			if index < len(pairs) {
+		sourceFactory: func() func() (KeyValue[K, []T], bool) {
+			index := 0 // Fresh index for each iterator
+			return func() (KeyValue[K, []T], bool) {
+				if index >= len(pairs) {
+					return KeyValue[K, []T]{}, false
+				}
 				result := pairs[index]
 				index++
 				return result, true
 			}
-			return KeyValue[K, []T]{}, false
 		},
 	}
 }

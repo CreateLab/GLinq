@@ -4,17 +4,19 @@ import "sort"
 
 // Where filters elements by predicate.
 func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
-	oldSource := s.source
 	return &stream[T]{
-		source: func() (T, bool) {
-			for {
-				value, ok := oldSource()
-				if !ok {
-					var zero T
-					return zero, false
-				}
-				if predicate(value) {
-					return value, true
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			return func() (T, bool) {
+				for {
+					value, ok := source()
+					if !ok {
+						var zero T
+						return zero, false
+					}
+					if predicate(value) {
+						return value, true
+					}
 				}
 			}
 		},
@@ -31,15 +33,17 @@ func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 //	    ToSlice()
 //	// []int{2, 4, 6}
 func (s *stream[T]) Select(mapper func(T) T) Stream[T] {
-	oldSource := s.source
 	return &stream[T]{
-		source: func() (T, bool) {
-			value, ok := oldSource()
-			if !ok {
-				var zero T
-				return zero, false
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			return func() (T, bool) {
+				value, ok := source()
+				if !ok {
+					var zero T
+					return zero, false
+				}
+				return mapper(value), true
 			}
-			return mapper(value), true
 		},
 	}
 }
@@ -54,18 +58,20 @@ func (s *stream[T]) Select(mapper func(T) T) Stream[T] {
 //	    ToSlice()
 //	// []int{0, 2, 6}
 func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
-	oldSource := s.source
-	index := 0
 	return &stream[T]{
-		source: func() (T, bool) {
-			value, ok := oldSource()
-			if !ok {
-				var zero T
-				return zero, false
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			index := 0                  // Fresh counter
+			return func() (T, bool) {
+				value, ok := source()
+				if !ok {
+					var zero T
+					return zero, false
+				}
+				result := mapper(value, index)
+				index++
+				return result, true
 			}
-			result := mapper(value, index)
-			index++
-			return result, true
 		},
 	}
 }
@@ -82,13 +88,15 @@ func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
 //	// []string{"num_1", "num_2", "num_3"}
 func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 	return &stream[R]{
-		source: func() (R, bool) {
-			value, ok := enum.Next()
-			if !ok {
-				var zero R
-				return zero, false
+		sourceFactory: func() func() (R, bool) {
+			return func() (R, bool) {
+				value, ok := enum.Next()
+				if !ok {
+					var zero R
+					return zero, false
+				}
+				return mapper(value), true
 			}
-			return mapper(value), true
 		},
 	}
 }
@@ -104,57 +112,63 @@ func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 //	).ToSlice()
 //	// []string{"num_1_at_0", "num_2_at_1", "num_3_at_2"}
 func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream[R] {
-	index := 0
 	return &stream[R]{
-		source: func() (R, bool) {
-			value, ok := enum.Next()
-			if !ok {
-				var zero R
-				return zero, false
+		sourceFactory: func() func() (R, bool) {
+			index := 0 // Fresh counter
+			return func() (R, bool) {
+				value, ok := enum.Next()
+				if !ok {
+					var zero R
+					return zero, false
+				}
+				result := mapper(value, index)
+				index++
+				return result, true
 			}
-			result := mapper(value, index)
-			index++
-			return result, true
 		},
 	}
 }
 
 // Take takes the first n elements from Stream.
 func (s *stream[T]) Take(n int) Stream[T] {
-	oldSource := s.source
-	count := 0
 	return &stream[T]{
-		source: func() (T, bool) {
-			if count >= n {
-				var zero T
-				return zero, false
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			count := 0                  // Fresh counter
+			return func() (T, bool) {
+				if count >= n {
+					var zero T
+					return zero, false
+				}
+				value, ok := source()
+				if !ok {
+					var zero T
+					return zero, false
+				}
+				count++
+				return value, true
 			}
-			value, ok := oldSource()
-			if !ok {
-				var zero T
-				return zero, false
-			}
-			count++
-			return value, true
 		},
 	}
 }
 
 // Skip skips the first n elements from Stream.
 func (s *stream[T]) Skip(n int) Stream[T] {
-	oldSource := s.source
-	skipped := 0
 	return &stream[T]{
-		source: func() (T, bool) {
-			for skipped < n {
-				_, ok := oldSource()
-				if !ok {
-					var zero T
-					return zero, false
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			skipped := 0                // Fresh counter
+			return func() (T, bool) {
+				for skipped < n {
+					_, ok := source()
+					if !ok {
+						var zero T
+						return zero, false
+					}
+					skipped++
 				}
-				skipped++
+				return source()
 			}
-			return oldSource()
 		},
 	}
 }
@@ -203,43 +217,59 @@ func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Str
 		return Empty[T]()
 	}
 
-	var heap []T
+	return &stream[T]{
+		sourceFactory: func() func() (T, bool) {
+			var heap []T
 
-	// Collect first n elements
-	for i := 0; i < n; i++ {
-		val, ok := enum.Next()
-		if !ok {
-			break
-		}
-		heap = append(heap, val)
+			// Collect first n elements
+			for i := 0; i < n; i++ {
+				val, ok := enum.Next()
+				if !ok {
+					break
+				}
+				heap = append(heap, val)
+			}
+
+			if len(heap) == 0 {
+				var zero T
+				return func() (T, bool) {
+					return zero, false
+				}
+			}
+
+			// Build max-heap
+			buildHeap(heap, func(a, b T) bool { return !less(a, b) })
+
+			// Process remaining elements
+			for {
+				val, ok := enum.Next()
+				if !ok {
+					break
+				}
+
+				if less(val, heap[0]) {
+					heap[0] = val
+					heapifyDown(heap, 0, len(heap), func(a, b T) bool { return !less(a, b) })
+				}
+			}
+
+			// Sort the result
+			sort.Slice(heap, func(i, j int) bool {
+				return less(heap[i], heap[j])
+			})
+
+			index := 0
+			return func() (T, bool) {
+				if index >= len(heap) {
+					var zero T
+					return zero, false
+				}
+				result := heap[index]
+				index++
+				return result, true
+			}
+		},
 	}
-
-	if len(heap) == 0 {
-		return Empty[T]()
-	}
-
-	// Build max-heap
-	buildHeap(heap, func(a, b T) bool { return !less(a, b) })
-
-	// Process remaining elements
-	for {
-		val, ok := enum.Next()
-		if !ok {
-			break
-		}
-
-		if less(val, heap[0]) {
-			heap[0] = val
-			heapifyDown(heap, 0, len(heap), func(a, b T) bool { return !less(a, b) })
-		}
-	}
-
-	// Sort the result
-	sort.Slice(heap, func(i, j int) bool {
-		return less(heap[i], heap[j])
-	})
-
-	return From(heap)
 }
 
 // TakeOrderedDescendingBy returns the first n elements ordered in descending order by the less function.
@@ -276,32 +306,34 @@ func (s *stream[T]) Reverse() Stream[T] {
 //	).ToSlice()
 //	// [1, 2, 3, 4, 5]
 func SelectMany[T, R any](enum Enumerable[T], selector func(T) Enumerable[R]) Stream[R] {
-	var currentEnum Enumerable[R]
-	var hasCurrent bool
-
 	return &stream[R]{
-		source: func() (R, bool) {
-			for {
-				// If we have a current enumerable, try to get next element from it
-				if hasCurrent {
-					val, ok := currentEnum.Next()
-					if ok {
-						return val, true
+		sourceFactory: func() func() (R, bool) {
+			var currentEnum Enumerable[R]
+			var hasCurrent bool
+
+			return func() (R, bool) {
+				for {
+					// If we have a current enumerable, try to get next element from it
+					if hasCurrent {
+						val, ok := currentEnum.Next()
+						if ok {
+							return val, true
+						}
+						// Current enumerable exhausted, move to next
+						hasCurrent = false
 					}
-					// Current enumerable exhausted, move to next
-					hasCurrent = false
-				}
 
-				// Get next element from source
-				elem, ok := enum.Next()
-				if !ok {
-					var zero R
-					return zero, false
-				}
+					// Get next element from source
+					elem, ok := enum.Next()
+					if !ok {
+						var zero R
+						return zero, false
+					}
 
-				// Transform element into enumerable
-				currentEnum = selector(elem)
-				hasCurrent = true
+					// Transform element into enumerable
+					currentEnum = selector(elem)
+					hasCurrent = true
+				}
 			}
 		},
 	}

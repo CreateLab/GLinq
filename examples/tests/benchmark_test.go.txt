@@ -1,4 +1,4 @@
-/*package tests
+package main
 
 import (
 	"testing"
@@ -8,47 +8,320 @@ import (
 	"github.com/thoas/go-funk"
 )
 
+// Dataset sizes
 const (
-	largeSize = 1000000
+	small  = 100
+	medium = 10_000
+	large  = 1_000_000
 )
 
-func BenchmarkComplexChainFirst_Plain(b *testing.B) {
-	data := makeData(largeSize)
+// ============================================================================
+// Scenario 1: Filter + Map + First
+// Best case for lazy evaluation - stops early after finding first match
+// ============================================================================
+
+func BenchmarkFilterMapFirst_Small_Samber(b *testing.B) {
+	data := makeInts(small)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result := plainComplexChainFirst(data)
-		_ = result
+		_ = samberFilterMapFirst(data)
 	}
 }
 
-func BenchmarkComplexChainFirst_Samber(b *testing.B) {
-	data := makeData(largeSize)
+func BenchmarkFilterMapFirst_Small_GoFunk(b *testing.B) {
+	data := makeInts(small)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result := samberComplexChainFirst(data)
-		_ = result
+		_ = goFunkFilterMapFirst(data)
 	}
 }
 
-func BenchmarkComplexChainFirst_GoFunk(b *testing.B) {
-	data := makeData(largeSize)
+func BenchmarkFilterMapFirst_Small_Glinq(b *testing.B) {
+	data := makeInts(small)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result := goFunkComplexChainFirst(data)
-		_ = result
+		_ = glinqFilterMapFirst(data)
 	}
 }
 
-func BenchmarkComplexChainFirst_Glinq(b *testing.B) {
-	data := makeData(largeSize)
+func BenchmarkFilterMapFirst_Medium_Samber(b *testing.B) {
+	data := makeInts(medium)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result := glinqComplexChainFirst(data)
-		_ = result
+		_ = samberFilterMapFirst(data)
 	}
 }
 
-func makeData(size int) []int {
+func BenchmarkFilterMapFirst_Medium_GoFunk(b *testing.B) {
+	data := makeInts(medium)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkFilterMapFirst(data)
+	}
+}
+
+func BenchmarkFilterMapFirst_Medium_Glinq(b *testing.B) {
+	data := makeInts(medium)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqFilterMapFirst(data)
+	}
+}
+
+func BenchmarkFilterMapFirst_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberFilterMapFirst(data)
+	}
+}
+
+func BenchmarkFilterMapFirst_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkFilterMapFirst(data)
+	}
+}
+
+func BenchmarkFilterMapFirst_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqFilterMapFirst(data)
+	}
+}
+
+// ============================================================================
+// Scenario 2: Complex Chain + First
+// Multiple operations with early termination
+// Where -> Select -> Where -> Select -> Where -> Select -> First
+// ============================================================================
+
+func BenchmarkComplexChainFirst_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberComplexChainFirst(data)
+	}
+}
+
+func BenchmarkComplexChainFirst_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkComplexChainFirst(data)
+	}
+}
+
+func BenchmarkComplexChainFirst_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqComplexChainFirst(data)
+	}
+}
+
+// ============================================================================
+// Scenario 3: Chain + Take(10)
+// Process only what's needed
+// ============================================================================
+
+func BenchmarkChainTake10_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberChainTake10(data)
+	}
+}
+
+func BenchmarkChainTake10_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkChainTake10(data)
+	}
+}
+
+func BenchmarkChainTake10_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqChainTake10(data)
+	}
+}
+
+// ============================================================================
+// Scenario 4: Filter + Map + ToSlice
+// Full materialization - everyone processes everything
+// Shows overhead of lazy evaluation when all elements needed
+// ============================================================================
+
+func BenchmarkFilterMapSlice_Medium_Samber(b *testing.B) {
+	data := makeInts(medium)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberFilterMapSlice(data)
+	}
+}
+
+func BenchmarkFilterMapSlice_Medium_GoFunk(b *testing.B) {
+	data := makeInts(medium)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkFilterMapSlice(data)
+	}
+}
+
+func BenchmarkFilterMapSlice_Medium_Glinq(b *testing.B) {
+	data := makeInts(medium)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqFilterMapSlice(data)
+	}
+}
+
+func BenchmarkFilterMapSlice_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberFilterMapSlice(data)
+	}
+}
+
+func BenchmarkFilterMapSlice_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkFilterMapSlice(data)
+	}
+}
+
+func BenchmarkFilterMapSlice_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqFilterMapSlice(data)
+	}
+}
+
+// ============================================================================
+// Scenario 5: Skip + Take (pagination)
+// ============================================================================
+
+func BenchmarkSkipTake_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberSkipTake(data)
+	}
+}
+
+func BenchmarkSkipTake_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkSkipTake(data)
+	}
+}
+
+func BenchmarkSkipTake_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqSkipTake(data)
+	}
+}
+
+// ============================================================================
+// Scenario 6: Any with predicate
+// ============================================================================
+
+func BenchmarkAny_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberAny(data)
+	}
+}
+
+func BenchmarkAny_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkAny(data)
+	}
+}
+
+func BenchmarkAny_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqAny(data)
+	}
+}
+
+// ============================================================================
+// Scenario 7: Count with filter
+// ============================================================================
+
+func BenchmarkCountWhere_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberCountWhere(data)
+	}
+}
+
+func BenchmarkCountWhere_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkCountWhere(data)
+	}
+}
+
+func BenchmarkCountWhere_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqCountWhere(data)
+	}
+}
+
+// ============================================================================
+// Scenario 8: Aggregate/Reduce
+// ============================================================================
+
+func BenchmarkAggregate_Large_Samber(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = samberAggregate(data)
+	}
+}
+
+func BenchmarkAggregate_Large_GoFunk(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = goFunkAggregate(data)
+	}
+}
+
+func BenchmarkAggregate_Large_Glinq(b *testing.B) {
+	data := makeInts(large)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = glinqAggregate(data)
+	}
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+func makeInts(size int) []int {
 	data := make([]int, size)
 	for i := 0; i < size; i++ {
 		data[i] = i
@@ -56,50 +329,48 @@ func makeData(size int) []int {
 	return data
 }
 
-func plainComplexChainFirst(data []int) int {
-	filtered1 := make([]int, 0)
-	for _, v := range data {
-		if v%2 == 0 {
-			filtered1 = append(filtered1, v)
-		}
-	}
+// ============================================================================
+// Implementations - Scenario 1: Filter + Map + First
+// ============================================================================
 
-	mapped1 := make([]int, len(filtered1))
-	for i, v := range filtered1 {
-		mapped1[i] = v * 3
-	}
-
-	filtered2 := make([]int, 0)
-	for _, v := range mapped1 {
-		if v > 100 {
-			filtered2 = append(filtered2, v)
-		}
-	}
-
-	mapped2 := make([]int, len(filtered2))
-	for i, v := range filtered2 {
-		mapped2[i] = v + 50
-	}
-
-	filtered3 := make([]int, 0)
-	for _, v := range mapped2 {
-		if v < 10000 {
-			filtered3 = append(filtered3, v)
-		}
-	}
-
-	mapped3 := make([]int, len(filtered3))
-	for i, v := range filtered3 {
-		mapped3[i] = v / 2
-	}
-
-	if len(mapped3) > 0 {
-		return mapped3[0]
+func samberFilterMapFirst(data []int) int {
+	filtered := lo.Filter(data, func(x int, _ int) bool {
+		return x > 100
+	})
+	mapped := lo.Map(filtered, func(x int, _ int) int {
+		return x * 2
+	})
+	if len(mapped) > 0 {
+		return mapped[0]
 	}
 	return 0
 }
 
-// Samber
+func goFunkFilterMapFirst(data []int) int {
+	filtered := funk.Filter(data, func(x int) bool {
+		return x > 100
+	}).([]int)
+	mapped := funk.Map(filtered, func(x int) int {
+		return x * 2
+	}).([]int)
+	if len(mapped) > 0 {
+		return mapped[0]
+	}
+	return 0
+}
+
+func glinqFilterMapFirst(data []int) int {
+	result, _ := glinq.From(data).
+		Where(func(x int) bool { return x > 100 }).
+		Select(func(x int) int { return x * 2 }).
+		First()
+	return result
+}
+
+// ============================================================================
+// Implementations - Scenario 2: Complex Chain + First
+// ============================================================================
+
 func samberComplexChainFirst(data []int) int {
 	result := lo.Map(
 		lo.Filter(
@@ -135,32 +406,25 @@ func samberComplexChainFirst(data []int) int {
 	return 0
 }
 
-// GoFunk
 func goFunkComplexChainFirst(data []int) int {
 	filtered1 := funk.Filter(data, func(x int) bool {
 		return x%2 == 0
 	}).([]int)
-
 	mapped1 := funk.Map(filtered1, func(x int) int {
 		return x * 3
 	}).([]int)
-
 	filtered2 := funk.Filter(mapped1, func(x int) bool {
 		return x > 100
 	}).([]int)
-
 	mapped2 := funk.Map(filtered2, func(x int) int {
 		return x + 50
 	}).([]int)
-
 	filtered3 := funk.Filter(mapped2, func(x int) bool {
 		return x < 10000
 	}).([]int)
-
 	mapped3 := funk.Map(filtered3, func(x int) int {
 		return x / 2
 	}).([]int)
-
 	if len(mapped3) > 0 {
 		return mapped3[0]
 	}
@@ -177,4 +441,179 @@ func glinqComplexChainFirst(data []int) int {
 		Select(func(x int) int { return x / 2 }).
 		First()
 	return result
-}*/
+}
+
+// ============================================================================
+// Implementations - Scenario 3: Chain + Take(10)
+// ============================================================================
+
+func samberChainTake10(data []int) []int {
+	return lo.Slice(
+		lo.Filter(
+			lo.Map(
+				lo.Filter(data, func(x int, _ int) bool {
+					return x%2 == 0
+				}),
+				func(x int, _ int) int {
+					return x * 2
+				},
+			),
+			func(x int, _ int) bool {
+				return x > 100
+			},
+		),
+		0, 10,
+	)
+}
+
+func goFunkChainTake10(data []int) []int {
+	filtered := funk.Filter(data, func(x int) bool {
+		return x%2 == 0
+	}).([]int)
+	mapped := funk.Map(filtered, func(x int) int {
+		return x * 2
+	}).([]int)
+	filtered2 := funk.Filter(mapped, func(x int) bool {
+		return x > 100
+	}).([]int)
+	if len(filtered2) > 10 {
+		return filtered2[:10]
+	}
+	return filtered2
+}
+
+func glinqChainTake10(data []int) []int {
+	return glinq.From(data).
+		Where(func(x int) bool { return x%2 == 0 }).
+		Select(func(x int) int { return x * 2 }).
+		Where(func(x int) bool { return x > 100 }).
+		Take(10).
+		ToSlice()
+}
+
+// ============================================================================
+// Implementations - Scenario 4: Filter + Map + ToSlice
+// ============================================================================
+
+func samberFilterMapSlice(data []int) []int {
+	return lo.Map(
+		lo.Filter(data, func(x int, _ int) bool {
+			return x%2 == 0
+		}),
+		func(x int, _ int) int {
+			return x * 2
+		},
+	)
+}
+
+func goFunkFilterMapSlice(data []int) []int {
+	filtered := funk.Filter(data, func(x int) bool {
+		return x%2 == 0
+	}).([]int)
+	return funk.Map(filtered, func(x int) int {
+		return x * 2
+	}).([]int)
+}
+
+func glinqFilterMapSlice(data []int) []int {
+	return glinq.From(data).
+		Where(func(x int) bool { return x%2 == 0 }).
+		Select(func(x int) int { return x * 2 }).
+		ToSlice()
+}
+
+// ============================================================================
+// Implementations - Scenario 5: Skip + Take
+// ============================================================================
+
+func samberSkipTake(data []int) []int {
+	return lo.Slice(data, 100000, 100020)
+}
+
+func goFunkSkipTake(data []int) []int {
+	if len(data) > 100000 {
+		result := data[100000:]
+		if len(result) > 20 {
+			return result[:20]
+		}
+		return result
+	}
+	return []int{}
+}
+
+func glinqSkipTake(data []int) []int {
+	return glinq.From(data).
+		Skip(100000).
+		Take(20).
+		ToSlice()
+}
+
+// ============================================================================
+// Implementations - Scenario 6: Any
+// ============================================================================
+
+func samberAny(data []int) bool {
+	return lo.ContainsBy(data, func(x int) bool {
+		return x > 500000
+	})
+}
+
+func goFunkAny(data []int) bool {
+	return funk.Contains(
+		funk.Filter(data, func(x int) bool {
+			return x > 500000
+		}),
+		true,
+	)
+}
+
+func glinqAny(data []int) bool {
+	return glinq.From(data).
+		Any(func(x int) bool { return x > 500000 })
+}
+
+// ============================================================================
+// Implementations - Scenario 7: Count with filter
+// ============================================================================
+
+func samberCountWhere(data []int) int {
+	return lo.CountBy(data, func(x int) bool {
+		return x%2 == 0
+	})
+}
+
+func goFunkCountWhere(data []int) int {
+	return len(funk.Filter(data, func(x int) bool {
+		return x%2 == 0
+	}).([]int))
+}
+
+func glinqCountWhere(data []int) int {
+	return glinq.From(data).
+		Where(func(x int) bool { return x%2 == 0 }).
+		Count()
+}
+
+// ============================================================================
+// Implementations - Scenario 8: Aggregate
+// ============================================================================
+
+func samberAggregate(data []int) int {
+	return lo.Reduce(data, func(acc int, x int, _ int) int {
+		return acc + x
+	}, 0)
+}
+
+func goFunkAggregate(data []int) int {
+	result := funk.Reduce(data, func(acc, x int) int {
+		return acc + x
+	}, 0)
+	return result.(int)
+}
+
+func glinqAggregate(data []int) int {
+	return glinq.From(data).
+		Aggregate(0, func(acc, x int) int {
+			return acc + x
+		})
+}

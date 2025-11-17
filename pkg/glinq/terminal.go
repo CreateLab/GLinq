@@ -2,9 +2,10 @@ package glinq
 
 // ToSlice materializes Stream into a slice.
 func (s *stream[T]) ToSlice() []T {
+	iterator := s.sourceFactory() // Fresh iterator
 	var result []T
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -15,14 +16,16 @@ func (s *stream[T]) ToSlice() []T {
 
 // First returns the first element and true, or zero value and false if Stream is empty.
 func (s *stream[T]) First() (T, bool) {
-	return s.source()
+	iterator := s.sourceFactory() // Fresh iterator
+	return iterator()
 }
 
 // Count returns the number of elements in Stream.
 func (s *stream[T]) Count() int {
+	iterator := s.sourceFactory() // Fresh iterator
 	count := 0
 	for {
-		_, ok := s.source()
+		_, ok := iterator()
 		if !ok {
 			break
 		}
@@ -33,8 +36,9 @@ func (s *stream[T]) Count() int {
 
 // Any checks if there is at least one element satisfying the predicate.
 func (s *stream[T]) Any(predicate func(T) bool) bool {
+	iterator := s.sourceFactory() // Fresh iterator
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -47,8 +51,9 @@ func (s *stream[T]) Any(predicate func(T) bool) bool {
 
 // All checks if all elements satisfy the predicate.
 func (s *stream[T]) All(predicate func(T) bool) bool {
+	iterator := s.sourceFactory() // Fresh iterator
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -61,8 +66,9 @@ func (s *stream[T]) All(predicate func(T) bool) bool {
 
 // ForEach executes an action for each element in Stream.
 func (s *stream[T]) ForEach(action func(T)) {
+	iterator := s.sourceFactory() // Fresh iterator
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -83,11 +89,12 @@ func (s *stream[T]) Chunk(size int) [][]T {
 		return nil
 	}
 
+	iterator := s.sourceFactory() // Fresh iterator
 	var result [][]T
 	var currentChunk []T
 
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			// Add the last chunk if it's not empty
 			if len(currentChunk) > 0 {
@@ -110,11 +117,12 @@ func (s *stream[T]) Chunk(size int) [][]T {
 
 // Last returns the last element and true, or zero value and false if Stream is empty.
 func (s *stream[T]) Last() (T, bool) {
+	iterator := s.sourceFactory() // Fresh iterator
 	var last T
 	var found bool
 
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -138,11 +146,12 @@ func (s *stream[T]) Last() (T, bool) {
 //	})
 //	// youngest = Person{Age: 25, Name: "Bob"}, ok = true
 func (s *stream[T]) Min(comparator func(T, T) int) (T, bool) {
+	iterator := s.sourceFactory() // Fresh iterator
 	var minVal T
 	var found bool
 
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -168,11 +177,12 @@ func (s *stream[T]) Min(comparator func(T, T) int) (T, bool) {
 //	})
 //	// oldest = Person{Age: 30, Name: "Alice"}, ok = true
 func (s *stream[T]) Max(comparator func(T, T) int) (T, bool) {
+	iterator := s.sourceFactory() // Fresh iterator
 	var maxVal T
 	var found bool
 
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}
@@ -200,9 +210,10 @@ func (s *stream[T]) Max(comparator func(T, T) int) (T, bool) {
 //	product := From(numbers).Aggregate(1, func(acc, x int) int { return acc * x })
 //	// 6
 func (s *stream[T]) Aggregate(seed T, accumulator func(T, T) T) T {
+	iterator := s.sourceFactory() // Fresh iterator
 	result := seed
 	for {
-		value, ok := s.source()
+		value, ok := iterator()
 		if !ok {
 			break
 		}

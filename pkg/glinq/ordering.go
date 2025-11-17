@@ -4,35 +4,28 @@ import "sort"
 
 // orderBy is a common sorting function used by OrderBy and OrderByDescending.
 func (s *stream[T]) orderBy(ascending bool, comparator func(T, T) int) Stream[T] {
-	var sorted []T
-	var initialized bool
-	index := 0
-
 	return &stream[T]{
-		source: func() (T, bool) {
-			if !initialized {
-				sorted = s.ToSlice()
+		sourceFactory: func() func() (T, bool) {
+			sorted := s.ToSlice()
 
-				sort.Slice(sorted, func(i, j int) bool {
-					cmp := comparator(sorted[i], sorted[j])
-					if ascending {
-						return cmp < 0
-					}
-					return cmp > 0
-				})
+			sort.Slice(sorted, func(i, j int) bool {
+				cmp := comparator(sorted[i], sorted[j])
+				if ascending {
+					return cmp < 0
+				}
+				return cmp > 0
+			})
 
-				initialized = true
-				index = 0
-			}
-
-			if index < len(sorted) {
+			index := 0 // Fresh index for each iterator
+			return func() (T, bool) {
+				if index >= len(sorted) {
+					var zero T
+					return zero, false
+				}
 				result := sorted[index]
 				index++
 				return result, true
 			}
-
-			var zero T
-			return zero, false
 		},
 	}
 }

@@ -3,19 +3,22 @@ package glinq
 // Concat concatenates the current Stream with another Enumerable (preserving duplicates).
 // Elements from the current Stream come first, then elements from other.
 func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
-	firstExhausted := false
-
 	return &stream[T]{
-		source: func() (T, bool) {
-			if !firstExhausted {
-				val, ok := s.source()
-				if ok {
-					return val, true
-				}
-				firstExhausted = true
-			}
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			firstExhausted := false     // Fresh flag for each iterator
 
-			return other.Next()
+			return func() (T, bool) {
+				if !firstExhausted {
+					val, ok := source()
+					if ok {
+						return val, true
+					}
+					firstExhausted = true
+				}
+
+				return other.Next()
+			}
 		},
 	}
 }
@@ -31,30 +34,32 @@ func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
 //	union := Union(From(set1), From(set2)).ToSlice()
 //	// [1, 2, 3, 4, 5]
 func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
-	seen := make(map[T]bool)
-	var current Enumerable[T] = e1
-	secondStarted := false
-
 	return &stream[T]{
-		source: func() (T, bool) {
-			for {
-				val, ok := current.Next()
+		sourceFactory: func() func() (T, bool) {
+			seen := make(map[T]bool)
+			var current Enumerable[T] = e1
+			secondStarted := false
 
-				// Switch to second enumerable
-				if !ok {
-					if secondStarted {
-						var zero T
-						return zero, false
+			return func() (T, bool) {
+				for {
+					val, ok := current.Next()
+
+					// Switch to second enumerable
+					if !ok {
+						if secondStarted {
+							var zero T
+							return zero, false
+						}
+						current = e2
+						secondStarted = true
+						continue
 					}
-					current = e2
-					secondStarted = true
-					continue
-				}
 
-				// Return only unique elements
-				if !seen[val] {
-					seen[val] = true
-					return val, true
+					// Return only unique elements
+					if !seen[val] {
+						seen[val] = true
+						return val, true
+					}
 				}
 			}
 		},
@@ -65,29 +70,31 @@ func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
 func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
-	// Materialize e2 into a set
-	otherSet := make(map[T]bool)
-	for {
-		val, ok := e2.Next()
-		if !ok {
-			break
-		}
-		otherSet[val] = true
-	}
-
-	seen := make(map[T]bool)
 	return &stream[T]{
-		source: func() (T, bool) {
+		sourceFactory: func() func() (T, bool) {
+			// Materialize e2 into a set
+			otherSet := make(map[T]bool)
 			for {
-				val, ok := e1.Next()
+				val, ok := e2.Next()
 				if !ok {
-					var zero T
-					return zero, false
+					break
 				}
+				otherSet[val] = true
+			}
 
-				if otherSet[val] && !seen[val] {
-					seen[val] = true
-					return val, true
+			seen := make(map[T]bool)
+			return func() (T, bool) {
+				for {
+					val, ok := e1.Next()
+					if !ok {
+						var zero T
+						return zero, false
+					}
+
+					if otherSet[val] && !seen[val] {
+						seen[val] = true
+						return val, true
+					}
 				}
 			}
 		},
@@ -98,29 +105,31 @@ func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
 func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
-	// Materialize e2 into a set
-	otherSet := make(map[T]bool)
-	for {
-		val, ok := e2.Next()
-		if !ok {
-			break
-		}
-		otherSet[val] = true
-	}
-
-	seen := make(map[T]bool)
 	return &stream[T]{
-		source: func() (T, bool) {
+		sourceFactory: func() func() (T, bool) {
+			// Materialize e2 into a set
+			otherSet := make(map[T]bool)
 			for {
-				val, ok := e1.Next()
+				val, ok := e2.Next()
 				if !ok {
-					var zero T
-					return zero, false
+					break
 				}
+				otherSet[val] = true
+			}
 
-				if !otherSet[val] && !seen[val] {
-					seen[val] = true
-					return val, true
+			seen := make(map[T]bool)
+			return func() (T, bool) {
+				for {
+					val, ok := e1.Next()
+					if !ok {
+						var zero T
+						return zero, false
+					}
+
+					if !otherSet[val] && !seen[val] {
+						seen[val] = true
+						return val, true
+					}
 				}
 			}
 		},
