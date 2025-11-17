@@ -1,0 +1,180 @@
+/*package tests
+
+import (
+	"testing"
+
+	"github.com/CreateLab/glinq/pkg/glinq"
+	"github.com/samber/lo"
+	"github.com/thoas/go-funk"
+)
+
+const (
+	largeSize = 1000000
+)
+
+func BenchmarkComplexChainFirst_Plain(b *testing.B) {
+	data := makeData(largeSize)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := plainComplexChainFirst(data)
+		_ = result
+	}
+}
+
+func BenchmarkComplexChainFirst_Samber(b *testing.B) {
+	data := makeData(largeSize)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := samberComplexChainFirst(data)
+		_ = result
+	}
+}
+
+func BenchmarkComplexChainFirst_GoFunk(b *testing.B) {
+	data := makeData(largeSize)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := goFunkComplexChainFirst(data)
+		_ = result
+	}
+}
+
+func BenchmarkComplexChainFirst_Glinq(b *testing.B) {
+	data := makeData(largeSize)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		result := glinqComplexChainFirst(data)
+		_ = result
+	}
+}
+
+func makeData(size int) []int {
+	data := make([]int, size)
+	for i := 0; i < size; i++ {
+		data[i] = i
+	}
+	return data
+}
+
+func plainComplexChainFirst(data []int) int {
+	filtered1 := make([]int, 0)
+	for _, v := range data {
+		if v%2 == 0 {
+			filtered1 = append(filtered1, v)
+		}
+	}
+
+	mapped1 := make([]int, len(filtered1))
+	for i, v := range filtered1 {
+		mapped1[i] = v * 3
+	}
+
+	filtered2 := make([]int, 0)
+	for _, v := range mapped1 {
+		if v > 100 {
+			filtered2 = append(filtered2, v)
+		}
+	}
+
+	mapped2 := make([]int, len(filtered2))
+	for i, v := range filtered2 {
+		mapped2[i] = v + 50
+	}
+
+	filtered3 := make([]int, 0)
+	for _, v := range mapped2 {
+		if v < 10000 {
+			filtered3 = append(filtered3, v)
+		}
+	}
+
+	mapped3 := make([]int, len(filtered3))
+	for i, v := range filtered3 {
+		mapped3[i] = v / 2
+	}
+
+	if len(mapped3) > 0 {
+		return mapped3[0]
+	}
+	return 0
+}
+
+// Samber
+func samberComplexChainFirst(data []int) int {
+	result := lo.Map(
+		lo.Filter(
+			lo.Map(
+				lo.Filter(
+					lo.Map(
+						lo.Filter(data, func(x int, _ int) bool {
+							return x%2 == 0
+						}),
+						func(x int, _ int) int {
+							return x * 3
+						},
+					),
+					func(x int, _ int) bool {
+						return x > 100
+					},
+				),
+				func(x int, _ int) int {
+					return x + 50
+				},
+			),
+			func(x int, _ int) bool {
+				return x < 10000
+			},
+		),
+		func(x int, _ int) int {
+			return x / 2
+		},
+	)
+	if len(result) > 0 {
+		return result[0]
+	}
+	return 0
+}
+
+// GoFunk
+func goFunkComplexChainFirst(data []int) int {
+	filtered1 := funk.Filter(data, func(x int) bool {
+		return x%2 == 0
+	}).([]int)
+
+	mapped1 := funk.Map(filtered1, func(x int) int {
+		return x * 3
+	}).([]int)
+
+	filtered2 := funk.Filter(mapped1, func(x int) bool {
+		return x > 100
+	}).([]int)
+
+	mapped2 := funk.Map(filtered2, func(x int) int {
+		return x + 50
+	}).([]int)
+
+	filtered3 := funk.Filter(mapped2, func(x int) bool {
+		return x < 10000
+	}).([]int)
+
+	mapped3 := funk.Map(filtered3, func(x int) int {
+		return x / 2
+	}).([]int)
+
+	if len(mapped3) > 0 {
+		return mapped3[0]
+	}
+	return 0
+}
+
+func glinqComplexChainFirst(data []int) int {
+	result, _ := glinq.From(data).
+		Where(func(x int) bool { return x%2 == 0 }).
+		Select(func(x int) int { return x * 3 }).
+		Where(func(x int) bool { return x > 100 }).
+		Select(func(x int) int { return x + 50 }).
+		Where(func(x int) bool { return x < 10000 }).
+		Select(func(x int) int { return x / 2 }).
+		First()
+	return result
+}*/

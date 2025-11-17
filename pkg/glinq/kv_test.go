@@ -1,6 +1,7 @@
 package glinq
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -127,6 +128,141 @@ func TestMapFilter(t *testing.T) {
 
 	if _, ok := result["banana"]; ok {
 		t.Errorf("expected banana to be filtered out")
+	}
+}
+
+// TestFromMapOnDemand проверяет что FromMap читает значения по требованию
+func TestFromMapOnDemand(t *testing.T) {
+	m := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	stream := FromMap(m)
+
+	// Изменяем значение в мапе после создания стрима
+	m["a"] = 999
+
+	// Читаем из стрима - должно получить новое значение
+	result := stream.ToSlice()
+
+	// Проверяем что значение было прочитано по требованию (новое значение)
+	found := false
+	for _, kv := range result {
+		if kv.Key == "a" {
+			if kv.Value != 999 {
+				t.Errorf("Expected FromMap to read values on-demand, got %d, expected 999", kv.Value)
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected to find key 'a' in result")
+	}
+}
+
+// TestFromMapSafeSnapshot проверяет что FromMapSafe делает полный снимок
+func TestFromMapSafeSnapshot(t *testing.T) {
+	m := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+	stream := FromMapSafe(m)
+
+	// Изменяем значение в мапе после создания стрима
+	m["a"] = 999
+
+	// Читаем из стрима - должно получить старое значение (снимок)
+	result := stream.ToSlice()
+
+	// Проверяем что значение было скопировано (старое значение)
+	found := false
+	for _, kv := range result {
+		if kv.Key == "a" {
+			if kv.Value != 1 {
+				t.Errorf("Expected FromMapSafe to take snapshot, got %d, expected 1", kv.Value)
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected to find key 'a' in result")
+	}
+
+	// Проверяем что остальные значения тоже не изменились
+	for _, kv := range result {
+		if kv.Key == "b" && kv.Value != 2 {
+			t.Errorf("Expected value 2 for key 'b', got %d", kv.Value)
+		}
+		if kv.Key == "c" && kv.Value != 3 {
+			t.Errorf("Expected value 3 for key 'c', got %d", kv.Value)
+		}
+	}
+}
+
+// TestFromMapKeysOnly проверяет что FromMap копирует только ключи
+func TestFromMapKeysOnly(t *testing.T) {
+	// Используем большую структуру для значений чтобы проверить что она не копируется
+	type LargeValue struct {
+		Data [1000]int
+	}
+
+	m := make(map[int]LargeValue)
+	for i := 0; i < 10; i++ {
+		m[i] = LargeValue{Data: [1000]int{i}}
+	}
+
+	stream := FromMap(m)
+	result := stream.ToSlice()
+
+	if len(result) != 10 {
+		t.Errorf("Expected 10 elements, got %d", len(result))
+	}
+
+	// Проверяем что значения корректны
+	for _, kv := range result {
+		if kv.Value.Data[0] != kv.Key {
+			t.Errorf("Expected value Data[0] == key, got %d != %d", kv.Value.Data[0], kv.Key)
+		}
+	}
+}
+
+// BenchmarkFromO1 проверяет что From() имеет O(1) сложность создания
+func BenchmarkFromO1(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000, 100000}
+	for _, size := range sizes {
+		data := make([]int, size)
+		for i := range data {
+			data[i] = i
+		}
+
+		b.Run(fmt.Sprintf("size_%d", size), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = From(data)
+			}
+		})
+	}
+}
+
+// BenchmarkFromSafeON проверяет что FromSafe() имеет O(n) сложность создания
+func BenchmarkFromSafeON(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000, 100000}
+	for _, size := range sizes {
+		data := make([]int, size)
+		for i := range data {
+			data[i] = i
+		}
+
+		b.Run(fmt.Sprintf("size_%d", size), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = FromSafe(data)
+			}
+		})
 	}
 }
 

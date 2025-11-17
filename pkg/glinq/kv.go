@@ -7,8 +7,56 @@ type KeyValue[K comparable, V any] struct {
 }
 
 // FromMap creates a Stream from a map.
+//
+// PERFORMANCE: Only keys are copied (O(n) where n is map size).
+// Values are read from the map on-demand during iteration (zero-copy for values).
+// This provides better performance for large maps with expensive-to-copy value types.
+//
+// WARNING: Modifying the map during iteration may produce unexpected results.
+// If you need protection from modifications, use FromMapSafe() instead.
+//
+// Example:
+//
+//	m := map[string]int{"a": 1, "b": 2}
+//	stream := FromMap(m)
+//	// Efficient - only keys copied, values read on-demand!
 func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
-	// Convert map to slice of pairs
+	// Copy only keys to preserve iteration order
+	keys := make([]K, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	index := 0
+	return &stream[KeyValue[K, V]]{
+		source: func() (KeyValue[K, V], bool) {
+			if index < len(keys) {
+				key := keys[index]
+				// Read value from map on-demand
+				value := m[key]
+				index++
+				return KeyValue[K, V]{Key: key, Value: value}, true
+			}
+			return KeyValue[K, V]{}, false
+		},
+	}
+}
+
+// FromMapSafe creates a Stream from a map with full snapshot (defensive copying).
+//
+// SAFETY: Both keys and values are copied into a snapshot, so modifications
+// to the original map will not affect the Stream. Use this when you need isolation.
+//
+// PERFORMANCE: Full snapshot can be expensive for large maps or expensive-to-copy value types.
+// If performance is critical and you control the map lifecycle, use FromMap() instead.
+//
+// Example:
+//
+//	m := map[string]int{"a": 1, "b": 2}
+//	stream := FromMapSafe(m)
+//	m["a"] = 999 // Won't affect the stream
+func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
+	// Convert map to slice of pairs (full snapshot)
 	pairs := make([]KeyValue[K, V], 0, len(m)) // pre-allocate capacity
 	for key, value := range m {
 		pairs = append(pairs, KeyValue[K, V]{Key: key, Value: value})

@@ -103,8 +103,47 @@ type stream[T any] struct {
 }
 
 // From creates a Stream from a slice.
-// The slice is copied, so changes to the original slice do not affect the Stream.
+//
+// PERFORMANCE: The stream holds a reference to the original slice (zero-copy approach).
+// This matches C# LINQ behavior for maximum performance.
+//
+// WARNING: Modifying the slice during iteration may produce unexpected results.
+// If you need protection from modifications, use FromSafe() instead.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3, 4, 5}
+//	stream := From(numbers)
+//	// Efficient - no copying!
 func From[T any](slice []T) Stream[T] {
+	index := 0
+	return &stream[T]{
+		source: func() (T, bool) {
+			if index < len(slice) {
+				result := slice[index]
+				index++
+				return result, true
+			}
+			var zero T
+			return zero, false
+		},
+	}
+}
+
+// FromSafe creates a Stream from a slice with defensive copying.
+//
+// SAFETY: The slice is copied, so modifications to the original slice
+// will not affect the Stream. Use this when you need isolation.
+//
+// PERFORMANCE: Copying large slices can be expensive.
+// If performance is critical and you control the slice lifecycle, use From() instead.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3, 4, 5}
+//	stream := FromSafe(numbers)
+//	numbers[0] = 999 // Won't affect the stream
+func FromSafe[T any](slice []T) Stream[T] {
 	// Copy the slice to avoid issues with changes to the original slice
 	data := make([]T, len(slice))
 	copy(data, slice)

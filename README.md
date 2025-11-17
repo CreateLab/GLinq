@@ -98,6 +98,94 @@ intersect := glinq.Intersect(set1, set2).ToSlice() // [3]
 except := glinq.Except(set1, set2).ToSlice()      // [1, 2]
 ```
 
+## Performance Characteristics
+
+glinq is optimized for performance with zero-copy defaults, following C# LINQ's approach.
+
+### Stream Creation Performance
+
+#### `From()` - Zero-Copy (O(1))
+
+`From()` creates a stream instantly without copying data - it holds a reference to the original slice:
+
+```go
+data := []int{1, 2, 3, /* ...million elements */ }
+stream := From(data) // O(1) - instant, no copying!
+```
+
+**Characteristics:**
+- **Time Complexity:** O(1) - constant time creation
+- **Space Complexity:** O(1) - no additional memory allocation
+- **Behavior:** Modifications to the original slice are visible during iteration
+- **Use Case:** Default choice for maximum performance (safe in 99% of cases)
+
+#### `FromSafe()` - Defensive Copy (O(n))
+
+`FromSafe()` creates an isolated snapshot by copying the entire slice:
+
+```go
+data := []int{1, 2, 3, 4, 5}
+stream := FromSafe(data) // O(n) - copies all elements
+data[0] = 999            // Won't affect stream
+```
+
+**Characteristics:**
+- **Time Complexity:** O(n) - linear time for copying
+- **Space Complexity:** O(n) - full slice copy in memory
+- **Behavior:** Completely isolated from original slice modifications
+- **Use Case:** When you need protection from concurrent modifications or want isolation
+
+#### `FromMap()` - Keys Only Copy (O(n) keys, O(1) values)
+
+`FromMap()` copies only keys and reads values on-demand from the map:
+
+```go
+m := map[string]int{"a": 1, "b": 2, /* ...thousands of entries */ }
+stream := FromMap(m) // Copies keys only, reads values on-demand
+```
+
+**Characteristics:**
+- **Time Complexity:** O(n) for key copying, O(1) per value read
+- **Space Complexity:** O(n) for keys only (not values)
+- **Behavior:** Values are read from map during iteration (modifications visible)
+- **Use Case:** Optimal for large maps with expensive-to-copy value types
+
+#### `FromMapSafe()` - Full Snapshot (O(n))
+
+`FromMapSafe()` creates a complete snapshot of all key-value pairs:
+
+```go
+m := map[string]int{"a": 1, "b": 2}
+stream := FromMapSafe(m) // Full snapshot
+m["a"] = 999             // Won't affect stream
+```
+
+**Characteristics:**
+- **Time Complexity:** O(n) - copies all key-value pairs
+- **Space Complexity:** O(n) - full map snapshot in memory
+- **Behavior:** Completely isolated from original map modifications
+- **Use Case:** When you need complete isolation from map changes
+
+### Benchmark Comparison
+
+Run benchmarks to see the performance difference:
+
+```bash
+go test -bench=BenchmarkFrom -benchmem ./pkg/glinq/...
+```
+
+**Expected Results:**
+- `From()`: Constant time regardless of slice size
+- `FromSafe()`: Linear time scaling with slice size
+- `FromMap()`: Faster than `FromMapSafe()` for large maps with expensive value types
+
+### Recommendations
+
+1. **Use `From()` by default** - Maximum performance, safe in most cases
+2. **Use `FromSafe()`** - Only when you explicitly need isolation
+3. **Use `FromMap()`** - Default for maps, especially with large or expensive value types
+4. **Use `FromMapSafe()`** - Only when you need complete map isolation
+
 ## Documentation
 
 📚 **[Full Documentation & Wiki](docs/WIKI.md)** - Complete API reference, examples, and guides
