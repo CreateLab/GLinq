@@ -5,16 +5,15 @@ package glinq
 //
 // SIZE: Calculated as currentSize + otherSize if both known, else unknown.
 func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
-	var newSize *int
-	if s.size != nil {
+	var newSize int = -1
+	if s.size != -1 {
 		if sizable, ok := other.(Sizable[T]); ok {
 			if otherSize, known := sizable.Size(); known {
-				size := *s.size + otherSize
-				newSize = &size
+				newSize = s.size + otherSize
 			}
 		}
 	}
-	// else: nil (unknown)
+	// else: -1 (unknown)
 
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -79,7 +78,7 @@ func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown how many duplicates
+		size: -1, // LOSE: unknown how many duplicates
 	}
 }
 
@@ -117,7 +116,7 @@ func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown result count
+		size: -1, // LOSE: unknown result count
 	}
 }
 
@@ -155,6 +154,6 @@ func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown result count
+		size: -1, // LOSE: unknown result count
 	}
 }

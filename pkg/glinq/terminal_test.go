@@ -2,6 +2,7 @@ package glinq
 
 import (
 	"testing"
+	"time"
 )
 
 func TestToSlice(t *testing.T) {
@@ -71,7 +72,7 @@ func TestCountWithFilter(t *testing.T) {
 func TestAnyTrue(t *testing.T) {
 	slice := []int{1, 2, 3, 4, 5}
 	stream := From(slice)
-	result := stream.Any(func(x int) bool { return x == 3 })
+	result := stream.AnyMatch(func(x int) bool { return x == 3 })
 
 	if !result {
 		t.Errorf("expected true, got false")
@@ -81,7 +82,7 @@ func TestAnyTrue(t *testing.T) {
 func TestAnyFalse(t *testing.T) {
 	slice := []int{1, 2, 3, 4, 5}
 	stream := From(slice)
-	result := stream.Any(func(x int) bool { return x == 10 })
+	result := stream.AnyMatch(func(x int) bool { return x == 10 })
 
 	if result {
 		t.Errorf("expected false, got true")
@@ -90,10 +91,58 @@ func TestAnyFalse(t *testing.T) {
 
 func TestAnyEmpty(t *testing.T) {
 	stream := Empty[int]()
-	result := stream.Any(func(x int) bool { return x == 1 })
+	result := stream.AnyMatch(func(x int) bool { return x == 1 })
 
 	if result {
 		t.Errorf("expected false, got true")
+	}
+}
+
+func TestAny_WithElements(t *testing.T) {
+	slice := []int{1, 2, 3, 4, 5}
+	stream := From(slice)
+	result := stream.Any()
+
+	if !result {
+		t.Errorf("expected true, got false")
+	}
+}
+
+func TestAny_Empty(t *testing.T) {
+	stream := Empty[int]()
+	result := stream.Any()
+
+	if result {
+		t.Errorf("expected false, got true")
+	}
+}
+
+func TestAny_Optimization(t *testing.T) {
+	// Test with known size (should be O(1))
+	stream := From([]int{1, 2, 3})
+	start := time.Now()
+	result := stream.Any()
+	duration := time.Since(start)
+
+	if !result {
+		t.Errorf("expected true, got false")
+	}
+	if duration > time.Microsecond*100 {
+		t.Errorf("Any with known size should be O(1), took %v", duration)
+	}
+
+	// Test with unknown size (should iterate until first element)
+	stream2 := From([]int{1, 2, 3}).Where(func(x int) bool { return x > 0 })
+	start2 := time.Now()
+	result2 := stream2.Any()
+	duration2 := time.Since(start2)
+
+	if !result2 {
+		t.Errorf("expected true, got false")
+	}
+	// Should still be fast for first element
+	if duration2 > time.Millisecond {
+		t.Errorf("Any with unknown size should be fast, took %v", duration2)
 	}
 }
 

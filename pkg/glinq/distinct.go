@@ -25,7 +25,7 @@ func Distinct[T comparable](enum Enumerable[T]) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown how many duplicates
+		size: -1, // LOSE: unknown how many duplicates
 	}
 }
 
@@ -54,6 +54,6 @@ func (s *stream[T]) DistinctBy(keySelector func(T) any) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown how many duplicates
+		size: -1, // LOSE: unknown how many duplicates
 	}
 }

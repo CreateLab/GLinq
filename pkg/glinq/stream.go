@@ -38,8 +38,11 @@ type Stream[T any] interface {
 	First() (T, bool)
 	// Count returns the number of elements in Stream.
 	Count() int
-	// Any checks if there is at least one element satisfying the predicate.
-	Any(predicate func(T) bool) bool
+	// Any checks if there is at least one element in the Stream.
+	// OPTIMIZATION: Returns O(1) if size is known, otherwise iterates until first element.
+	Any() bool
+	// AnyMatch checks if there is at least one element satisfying the predicate.
+	AnyMatch(predicate func(T) bool) bool
 	// All checks if all elements satisfy the predicate.
 	All(predicate func(T) bool) bool
 	// ForEach executes an action for each element in Stream.
@@ -115,7 +118,7 @@ type Stream[T any] interface {
 type stream[T any] struct {
 	sourceFactory   func() func() (T, bool)
 	currentIterator func() (T, bool) // For Enumerable.Next()
-	size            *int             // nil if unknown, pointer to size if known
+	size            int              // -1 if unknown, actual size if known
 }
 
 // From creates a Stream from a slice.
@@ -132,7 +135,6 @@ type stream[T any] struct {
 //	stream := From(numbers)
 //	// Efficient - no copying!
 func From[T any](slice []T) Stream[T] {
-	size := len(slice)
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			index := 0 // Fresh index for each iterator
@@ -146,7 +148,7 @@ func From[T any](slice []T) Stream[T] {
 				return result, true
 			}
 		},
-		size: &size,
+		size: len(slice),
 	}
 }
 
@@ -168,7 +170,6 @@ func FromSafe[T any](slice []T) Stream[T] {
 	data := make([]T, len(slice))
 	copy(data, slice)
 
-	size := len(data)
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			index := 0 // Fresh index for each iterator
@@ -182,13 +183,12 @@ func FromSafe[T any](slice []T) Stream[T] {
 				return result, true
 			}
 		},
-		size: &size,
+		size: len(data),
 	}
 }
 
 // Empty creates an empty Stream that contains no elements.
 func Empty[T any]() Stream[T] {
-	size := 0
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			return func() (T, bool) {
@@ -196,7 +196,7 @@ func Empty[T any]() Stream[T] {
 				return zero, false
 			}
 		},
-		size: &size,
+		size: 0,
 	}
 }
 
@@ -214,7 +214,7 @@ func Range(start, count int) Stream[int] {
 				return result, true
 			}
 		},
-		size: &count,
+		size: count,
 	}
 }
 
@@ -228,19 +228,19 @@ func (s *stream[T]) Next() (T, bool) {
 
 // Size implements Sizable
 func (s *stream[T]) Size() (int, bool) {
-	if s.size == nil {
+	if s.size == -1 {
 		return 0, false
 	}
-	return *s.size, true
+	return s.size, true
 }
 
 // FromEnumerable creates a Stream from any Enumerable.
 // SIZE: Preserves size if source is Sizable, otherwise unknown.
 func FromEnumerable[T any](enum Enumerable[T]) Stream[T] {
-	var size *int
+	size := -1
 	if sizable, ok := enum.(Sizable[T]); ok {
 		if s, known := sizable.Size(); known {
-			size = &s
+			size = s
 		}
 	}
 	return &stream[T]{

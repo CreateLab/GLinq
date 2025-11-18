@@ -15,7 +15,6 @@ func (s *stream[T]) orderBy(ascending bool, comparator func(T, T) int) Stream[T]
 	})
 
 	// SIZE: Preserves size (1-to-1 transformation, materializes)
-	size := len(sorted)
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			index := 0 // Fresh index for each iterator
@@ -29,7 +28,7 @@ func (s *stream[T]) orderBy(ascending bool, comparator func(T, T) int) Stream[T]
 				return result, true
 			}
 		},
-		size: &size, // PRESERVE: 1-to-1 transformation
+		size: len(sorted), // PRESERVE: 1-to-1 transformation
 	}
 }
 

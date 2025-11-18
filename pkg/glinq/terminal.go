@@ -6,8 +6,8 @@ func (s *stream[T]) ToSlice() []T {
 	iterator := s.sourceFactory() // Fresh iterator
 	var result []T
 	// OPTIMIZATION: preallocate if size known
-	if s.size != nil {
-		result = make([]T, 0, *s.size)
+	if s.size != -1 {
+		result = make([]T, 0, s.size)
 	}
 	for {
 		value, ok := iterator()
@@ -29,8 +29,8 @@ func (s *stream[T]) First() (T, bool) {
 // OPTIMIZATION: Returns O(1) if size is known, otherwise O(n).
 func (s *stream[T]) Count() int {
 	// OPTIMIZATION: O(1) if size known!
-	if s.size != nil {
-		return *s.size
+	if s.size != -1 {
+		return s.size
 	}
 
 	// Fallback: iterate and count
@@ -46,8 +46,22 @@ func (s *stream[T]) Count() int {
 	return count
 }
 
-// Any checks if there is at least one element satisfying the predicate.
-func (s *stream[T]) Any(predicate func(T) bool) bool {
+// Any checks if there is at least one element in the Stream.
+// OPTIMIZATION: Returns O(1) if size is known, otherwise iterates until first element.
+func (s *stream[T]) Any() bool {
+	// OPTIMIZATION: O(1) if size known!
+	if s.size != -1 {
+		return s.size > 0
+	}
+
+	// Fallback: iterate until first element
+	iterator := s.sourceFactory() // Fresh iterator
+	_, ok := iterator()
+	return ok
+}
+
+// AnyMatch checks if there is at least one element satisfying the predicate.
+func (s *stream[T]) AnyMatch(predicate func(T) bool) bool {
 	iterator := s.sourceFactory() // Fresh iterator
 	for {
 		value, ok := iterator()
@@ -106,8 +120,8 @@ func (s *stream[T]) Chunk(size int) [][]T {
 	iterator := s.sourceFactory() // Fresh iterator
 	var result [][]T
 	// OPTIMIZATION: preallocate if size known
-	if s.size != nil {
-		chunkCount := (*s.size + size - 1) / size // ceil division
+	if s.size != -1 {
+		chunkCount := (s.size + size - 1) / size // ceil division
 		result = make([][]T, 0, chunkCount)
 	}
 	var currentChunk []T

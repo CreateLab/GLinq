@@ -22,7 +22,7 @@ func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 				}
 			}
 		},
-		size: nil, // LOSE: unknown how many pass filter
+		size: -1, // LOSE: unknown how many pass filter
 	}
 }
 
@@ -98,10 +98,10 @@ func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
 //	).ToSlice()
 //	// []string{"num_1", "num_2", "num_3"}
 func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
-	var size *int
+	size := -1
 	if sizable, ok := enum.(Sizable[T]); ok {
 		if s, known := sizable.Size(); known {
-			size = &s
+			size = s
 		}
 	}
 	return &stream[R]{
@@ -132,10 +132,10 @@ func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 //	).ToSlice()
 //	// []string{"num_1_at_0", "num_2_at_1", "num_3_at_2"}
 func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream[R] {
-	var size *int
+	size := -1
 	if sizable, ok := enum.(Sizable[T]); ok {
 		if s, known := sizable.Size(); known {
-			size = &s
+			size = s
 		}
 	}
 	return &stream[R]{
@@ -160,16 +160,15 @@ func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream
 //
 // SIZE: Calculated as min(sourceSize, n) if source size known, else n.
 func (s *stream[T]) Take(n int) Stream[T] {
-	var newSize *int
-	if s.size != nil {
-		size := *s.size
-		if size < n {
-			newSize = &size
+	var newSize int
+	if s.size != -1 {
+		if s.size < n {
+			newSize = s.size
 		} else {
-			newSize = &n
+			newSize = n
 		}
 	} else {
-		newSize = &n // Don't know source size, but result won't exceed n
+		newSize = n // Don't know source size, but result won't exceed n
 	}
 
 	return &stream[T]{
@@ -198,15 +197,15 @@ func (s *stream[T]) Take(n int) Stream[T] {
 //
 // SIZE: Calculated as max(0, sourceSize - n) if source size known, else unknown.
 func (s *stream[T]) Skip(n int) Stream[T] {
-	var newSize *int
-	if s.size != nil {
-		size := *s.size - n
+	var newSize int = -1
+	if s.size != -1 {
+		size := s.size - n
 		if size < 0 {
 			size = 0
 		}
-		newSize = &size
+		newSize = size
 	}
-	// else: nil (unknown)
+	// else: -1 (unknown)
 
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -224,7 +223,7 @@ func (s *stream[T]) Skip(n int) Stream[T] {
 				return source()
 			}
 		},
-		size: newSize, // CALCULATED: max(0, source - n) or nil
+		size: newSize, // CALCULATED: max(0, source - n) or -1
 	}
 }
 
@@ -274,19 +273,19 @@ func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Str
 		return Empty[T]()
 	}
 
-	var size *int
+	var size int
 	if sizable, ok := enum.(Sizable[T]); ok {
 		if s, known := sizable.Size(); known {
 			if s < n {
-				size = &s
+				size = s
 			} else {
-				size = &n
+				size = n
 			}
 		} else {
-			size = &n // Don't know source size, but result won't exceed n
+			size = n // Don't know source size, but result won't exceed n
 		}
 	} else {
-		size = &n // Don't know source size, but result won't exceed n
+		size = n // Don't know source size, but result won't exceed n
 	}
 
 	return &stream[T]{
@@ -413,6 +412,6 @@ func SelectMany[T, R any](enum Enumerable[T], selector func(T) Enumerable[R]) St
 				}
 			}
 		},
-		size: nil, // LOSE: 1-to-many transformation
+		size: -1, // LOSE: 1-to-many transformation
 	}
 }

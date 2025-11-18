@@ -27,7 +27,6 @@ func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 		keys = append(keys, key)
 	}
 
-	size := len(m)
 	return &stream[KeyValue[K, V]]{
 		sourceFactory: func() func() (KeyValue[K, V], bool) {
 			index := 0 // Fresh index for each iterator
@@ -42,7 +41,7 @@ func FromMap[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 				return KeyValue[K, V]{Key: key, Value: value}, true
 			}
 		},
-		size: &size,
+		size: len(m),
 	}
 }
 
@@ -66,7 +65,6 @@ func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 		pairs = append(pairs, KeyValue[K, V]{Key: key, Value: value})
 	}
 
-	size := len(pairs)
 	return &stream[KeyValue[K, V]]{
 		sourceFactory: func() func() (KeyValue[K, V], bool) {
 			index := 0 // Fresh index for each iterator
@@ -79,17 +77,17 @@ func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 				return result, true
 			}
 		},
-		size: &size,
+		size: len(pairs),
 	}
 }
 
 // Keys extracts only keys from Enumerable[KeyValue].
 // SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
-	var size *int
+	size := -1
 	if sizable, ok := enum.(Sizable[KeyValue[K, V]]); ok {
 		if s, known := sizable.Size(); known {
-			size = &s
+			size = s
 		}
 	}
 	return &stream[K]{
@@ -110,10 +108,10 @@ func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
 // Values extracts only values from Enumerable[KeyValue].
 // SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 func Values[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[V] {
-	var size *int
+	size := -1
 	if sizable, ok := enum.(Sizable[KeyValue[K, V]]); ok {
 		if s, known := sizable.Size(); known {
-			size = &s
+			size = s
 		}
 	}
 	return &stream[V]{
@@ -178,8 +176,7 @@ func GroupBy[T any, K comparable](enum Enumerable[T], keySelector func(T) K) Str
 		pairs = append(pairs, KeyValue[K, []T]{Key: key, Value: values})
 	}
 
-	// SIZE: Unknown - depends on how many unique keys exist
-	size := len(pairs)
+	// SIZE: Known after materialization
 	return &stream[KeyValue[K, []T]]{
 		sourceFactory: func() func() (KeyValue[K, []T], bool) {
 			index := 0 // Fresh index for each iterator
@@ -192,6 +189,6 @@ func GroupBy[T any, K comparable](enum Enumerable[T], keySelector func(T) K) Str
 				return result, true
 			}
 		},
-		size: &size, // Actually we know it after materialization
+		size: len(pairs), // Actually we know it after materialization
 	}
 }
