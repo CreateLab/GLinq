@@ -5,7 +5,7 @@ package glinq
 //
 // SIZE: Calculated as currentSize + otherSize if both known, else unknown.
 func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
-	var newSize int = -1
+	var newSize = -1
 	if s.size != -1 {
 		if sizable, ok := other.(Sizable[T]); ok {
 			if otherSize, known := sizable.Size(); known {
@@ -48,11 +48,13 @@ func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
 //	set2 := []int{3, 4, 5}
 //	union := Union(From(set1), From(set2)).ToSlice()
 //	// [1, 2, 3, 4, 5]
+//
+//nolint:gocognit
 func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			seen := make(map[T]bool)
-			var current Enumerable[T] = e1
+			var current = e1
 			secondStarted := false
 
 			return func() (T, bool) {
@@ -87,6 +89,8 @@ func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 // This is a function (not a method) because methods cannot have their own type constraints.
 //
 // SIZE: Loses size (unknown result count).
+//
+//nolint:gocognit
 func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -125,6 +129,8 @@ func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 // This is a function (not a method) because methods cannot have their own type constraints.
 //
 // SIZE: Loses size (unknown result count).
+//
+//nolint:gocognit
 func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {

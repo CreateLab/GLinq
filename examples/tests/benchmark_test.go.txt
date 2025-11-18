@@ -569,7 +569,7 @@ func goFunkAny(data []int) bool {
 
 func glinqAny(data []int) bool {
 	return glinq.From(data).
-		Any(func(x int) bool { return x > 500000 })
+		AnyMatch(func(x int) bool { return x > 500000 })
 }
 
 // ============================================================================

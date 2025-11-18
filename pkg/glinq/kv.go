@@ -84,45 +84,35 @@ func FromMapSafe[K comparable, V any](m map[K]V) Stream[KeyValue[K, V]] {
 // Keys extracts only keys from Enumerable[KeyValue].
 // SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 func Keys[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[K] {
-	size := -1
-	if sizable, ok := enum.(Sizable[KeyValue[K, V]]); ok {
-		if s, known := sizable.Size(); known {
-			size = s
-		}
-	}
-	return &stream[K]{
-		sourceFactory: func() func() (K, bool) {
-			return func() (K, bool) {
-				kv, ok := enum.Next()
-				if !ok {
-					var zero K
-					return zero, false
-				}
-				return kv.Key, true
-			}
-		},
-		size: size,
-	}
+	return extractFromKeyValue(enum, func(kv KeyValue[K, V]) K { return kv.Key })
 }
 
 // Values extracts only values from Enumerable[KeyValue].
 // SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 func Values[K comparable, V any](enum Enumerable[KeyValue[K, V]]) Stream[V] {
+	return extractFromKeyValue(enum, func(kv KeyValue[K, V]) V { return kv.Value })
+}
+
+func extractFromKeyValue[K comparable, V any, R any](
+	enum Enumerable[KeyValue[K, V]],
+	extractor func(KeyValue[K, V]) R,
+) Stream[R] {
 	size := -1
 	if sizable, ok := enum.(Sizable[KeyValue[K, V]]); ok {
 		if s, known := sizable.Size(); known {
 			size = s
 		}
 	}
-	return &stream[V]{
-		sourceFactory: func() func() (V, bool) {
-			return func() (V, bool) {
+
+	return &stream[R]{
+		sourceFactory: func() func() (R, bool) {
+			return func() (R, bool) {
 				kv, ok := enum.Next()
 				if !ok {
-					var zero V
+					var zero R
 					return zero, false
 				}
-				return kv.Value, true
+				return extractor(kv), true
 			}
 		},
 		size: size,

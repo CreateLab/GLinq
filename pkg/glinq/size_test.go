@@ -216,9 +216,10 @@ func TestFromEnumerable_PreservesSize(t *testing.T) {
 }
 
 func TestSelect_FreeFunction_PreservesSize(t *testing.T) {
+	const s = "num"
 	s1 := From([]int{1, 2, 3})
 	s2 := Select(s1, func(x int) string {
-		return "num"
+		return s
 	})
 	size, ok := s2.Size()
 	if !ok {

@@ -50,7 +50,7 @@ func main() {
 
 ## Architecture
 
-glinq separates interfaces into two levels:
+glinq separates interfaces into three levels:
 
 ### Enumerable[T]
 
@@ -62,24 +62,39 @@ type Enumerable[T any] interface {
 }
 ```
 
+### Sizable[T]
+
+Optional interface that extends `Enumerable` with size information for performance optimization:
+
+```go
+type Sizable[T any] interface {
+    Enumerable[T]
+    Size() (int, bool)  // Returns size and true if known, or 0 and false if unknown
+}
+```
+
+**Note:** This is an optional interface - not all Enumerables need to implement it. Size information is used internally for optimizations (preallocation, O(1) Count, etc.).
+
 ### Stream[T]
 
-Extends `Enumerable` and adds all operators (Where, Select, OrderBy, etc.):
+Extends both `Enumerable` and `Sizable`, and adds all operators (Where, Select, OrderBy, etc.):
 
 ```go
 type Stream[T any] interface {
     Enumerable[T]
+    Sizable[T]  // Provides Size() method
     Where(predicate func(T) bool) Stream[T]
     Select(mapper func(T) T) Stream[T]
     // ... more methods
 }
 ```
 
-### Why Two Interfaces?
+### Why Three Interfaces?
 
-- **Functions accept `Enumerable`**: Makes them universal and work with any iterator
-- **Methods on `Stream`**: Provide convenient chaining syntax
-- **Custom Sources**: You can implement `Enumerable` for your own data sources
+- **`Enumerable`**: Minimal interface for iteration - universal and works with any iterator
+- **`Sizable`**: Optional size hint for performance optimization - allows O(1) operations when size is known
+- **`Stream`**: Full-featured interface with all operators and convenient chaining syntax
+- **Custom Sources**: You can implement `Enumerable` (or `Sizable`) for your own data sources
 
 ### Creating Custom Enumerables
 
@@ -291,22 +306,59 @@ last, ok := glinq.From([]int{1, 2, 3}).Last()
 
 #### Count
 
-Counts number of elements:
+Counts number of elements. **Optimized:** Returns O(1) if size is known, otherwise O(n):
 
 ```go
 count := glinq.From([]int{1, 2, 3, 4, 5}).
     Where(func(x int) bool { return x > 2 }).
     Count()
 // 3
+
+// With known size - O(1) operation
+count := glinq.From([]int{1, 2, 3, 4, 5}).Count()
+// 5 (instant, no iteration needed)
 ```
 
 #### Any
 
+Checks if there is at least one element in the Stream. **Optimized:** Returns O(1) if size is known, otherwise iterates until first element:
+
+```go
+hasElements := glinq.From([]int{1, 2, 3}).Any()
+// true (O(1) - checks size)
+
+isEmpty := glinq.Empty[int]().Any()
+// false (O(1) - checks size)
+
+// With unknown size - iterates until first element
+hasAny := glinq.From([]int{1, 2, 3}).
+    Where(func(x int) bool { return x > 0 }).
+    Any()
+// true (iterates until first match)
+```
+
+#### AnyMatch
+
 Checks if any element satisfies predicate:
 
 ```go
-hasEven := glinq.From([]int{1, 2, 3}).Any(func(x int) bool { return x%2 == 0 })
+hasEven := glinq.From([]int{1, 2, 3}).AnyMatch(func(x int) bool { return x%2 == 0 })
 // true
+```
+
+#### Size
+
+Returns the known size of the collection and true, or 0 and false if size is unknown. Used internally for optimizations:
+
+```go
+size, known := glinq.From([]int{1, 2, 3, 4, 5}).Size()
+// size = 5, known = true
+
+// After filtering, size becomes unknown
+size, known := glinq.From([]int{1, 2, 3}).
+    Where(func(x int) bool { return x > 1 }).
+    Size()
+// size = 0, known = false
 ```
 
 #### All
@@ -680,6 +732,75 @@ unique := glinq.From(people).
 ---
 
 ## Performance Considerations
+
+### Size-Based Optimizations
+
+glinq automatically tracks size information when possible and uses it for performance optimizations:
+
+#### Operations That Preserve Size
+
+These operations maintain size information (1-to-1 transformations):
+- `Select` / `SelectWithIndex` - transforms each element
+- `OrderBy` / `OrderByDescending` - sorts (materializes, but preserves count)
+- `Reverse` - reverses order (materializes, but preserves count)
+- `Take` - calculates new size as `min(sourceSize, n)`
+- `Skip` - calculates new size as `max(0, sourceSize - n)`
+- `Concat` - adds sizes if both sources have known size
+
+#### Operations That Lose Size
+
+These operations lose size information (unknown result count):
+- `Where` - depends on how many elements pass the filter
+- `DistinctBy` / `Distinct` - depends on how many duplicates exist
+- `SelectMany` - 1-to-many transformation
+- `Union` / `Intersect` / `Except` - depends on overlap
+
+#### Performance Benefits
+
+When size is known, these operations are optimized:
+
+1. **`Count()`** - O(1) instead of O(n)
+   ```go
+   // O(1) - no iteration needed
+   count := glinq.From([]int{1, 2, 3, 4, 5}).Count()
+   
+   // O(n) - must iterate
+   count := glinq.From([]int{1, 2, 3}).
+       Where(func(x int) bool { return x > 1 }).
+       Count()
+   ```
+
+2. **`Any()`** - O(1) instead of iterating until first element
+   ```go
+   // O(1) - checks size
+   hasElements := glinq.From([]int{1, 2, 3}).Any()
+   
+   // Iterates until first element
+   hasAny := glinq.From([]int{1, 2, 3}).
+       Where(func(x int) bool { return x > 0 }).
+       Any()
+   ```
+
+3. **`ToSlice()`** - Preallocates capacity to avoid reallocations
+   ```go
+   // Preallocates capacity = 5, no reallocations
+   result := glinq.From([]int{1, 2, 3, 4, 5}).
+       Select(func(x int) int { return x * 2 }).
+       ToSlice()
+   
+   // No preallocation, may cause reallocations
+   result := glinq.From([]int{1, 2, 3}).
+       Where(func(x int) bool { return x > 1 }).
+       ToSlice()
+   ```
+
+4. **`Chunk()`** - Preallocates result slice capacity
+   ```go
+   // Preallocates capacity for chunks
+   chunks := glinq.From([]int{1, 2, 3, 4, 5, 6, 7}).Chunk(3)
+   ```
+
+**Note:** Size information is tracked automatically - you don't need to do anything special. Operations that preserve size will maintain it, operations that lose size will mark it as unknown (-1).
 
 ### Lazy Evaluation Benefits
 

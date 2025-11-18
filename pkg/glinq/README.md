@@ -24,11 +24,23 @@ result := glinq.From([]int{1, 2, 3, 4, 5}).
 
 ## Main Operations
 
-- **Stream Creation**: `From`, `Empty`, `Range`, `FromEnumerable`
+- **Stream Creation**: `From`, `Empty`, `Range`, `FromEnumerable`, `FromMap`
 - **Filtering**: `Where`, `DistinctBy`, `Take`, `Skip`
 - **Transformation**: `Select`, `SelectWithIndex`, `SelectMany`
 - **Ordering**: `OrderBy`, `OrderByDescending`, `Reverse`
 - **Grouping**: `GroupBy`
-- **Terminal**: `ToSlice`, `First`, `Count`, `Any`, `All`, `Aggregate`, `ForEach`
+- **Terminal**: `ToSlice`, `First`, `Count`, `Any`, `AnyMatch`, `All`, `Aggregate`, `ForEach`
+- **Size Information**: `Size()` - returns known size for performance optimizations
+
+## Performance Optimizations
+
+glinq automatically tracks size information when possible:
+
+- **`Count()`** - O(1) when size is known
+- **`Any()`** - O(1) when size is known  
+- **`ToSlice()`** - Preallocates capacity when size is known
+- **`Chunk()`** - Preallocates result capacity when size is known
+
+Size is preserved through transformations (`Select`, `Take`, `Skip`) and lost through filters (`Where`, `DistinctBy`).
 
 See [package documentation](https://github.com/CreateLab/GLinq) for full API reference.

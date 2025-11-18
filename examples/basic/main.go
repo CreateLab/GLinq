@@ -130,7 +130,7 @@ func main() {
 		Where(func(x int) bool { return x%2 == 0 }).
 		Count()
 	fmt.Printf("Count of even numbers in %v: %d\n", numbers5, count)
-	hasEven := glinq.From(numbers5).Any(func(x int) bool { return x%2 == 0 })
+	hasEven := glinq.From(numbers5).AnyMatch(func(x int) bool { return x%2 == 0 })
 	fmt.Printf("Has even numbers: %v\n\n", hasEven)
 
 	// Example 11: All and ForEach

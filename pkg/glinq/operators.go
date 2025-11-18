@@ -189,7 +189,7 @@ func (s *stream[T]) Take(n int) Stream[T] {
 				return value, true
 			}
 		},
-		size: newSize, // CALCULATED: min(source, n)
+		size: newSize,
 	}
 }
 
@@ -197,7 +197,7 @@ func (s *stream[T]) Take(n int) Stream[T] {
 //
 // SIZE: Calculated as max(0, sourceSize - n) if source size known, else unknown.
 func (s *stream[T]) Skip(n int) Stream[T] {
-	var newSize int = -1
+	var newSize = -1
 	if s.size != -1 {
 		size := s.size - n
 		if size < 0 {
@@ -223,7 +223,7 @@ func (s *stream[T]) Skip(n int) Stream[T] {
 				return source()
 			}
 		},
-		size: newSize, // CALCULATED: max(0, source - n) or -1
+		size: newSize,
 	}
 }
 
@@ -268,6 +268,8 @@ func heapifyDown[T any](items []T, i, n int, less func(a, b T) bool) {
 //	numbers := []int{5, 2, 8, 1, 9, 3}
 //	top3 := TakeOrderedBy(From(numbers), 3, func(a, b int) bool { return a < b })
 //	// Returns the 3 smallest elements: [1, 2, 3]
+//
+//nolint:gocognit
 func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Stream[T] {
 	if n <= 0 {
 		return Empty[T]()
@@ -340,7 +342,7 @@ func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Str
 				return result, true
 			}
 		},
-		size: size, // CALCULATED: min(source, n)
+		size: size,
 	}
 }
 
@@ -381,6 +383,8 @@ func (s *stream[T]) Reverse() Stream[T] {
 //	    func(slice []int) Enumerable[int] { return From(slice) },
 //	).ToSlice()
 //	// [1, 2, 3, 4, 5]
+//
+//nolint:gocognit
 func SelectMany[T, R any](enum Enumerable[T], selector func(T) Enumerable[R]) Stream[R] {
 	return &stream[R]{
 		sourceFactory: func() func() (R, bool) {

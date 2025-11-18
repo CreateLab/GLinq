@@ -9,6 +9,7 @@ LINQ-like API for Go with support for lazy evaluation.
 - **Composable**: Operations can be easily combined into chains
 - **Zero Dependencies**: No external dependencies required
 - **Extensible**: Works with any type implementing `Enumerable` interface
+- **Performance Optimized**: Automatic size tracking enables O(1) `Count()` and `Any()`, preallocation in `ToSlice()`
 
 ## Installation
 
@@ -54,6 +55,14 @@ strings := glinq.Select(
     func(x int) string { return fmt.Sprintf("num_%d", x) },
 ).ToSlice()
 // []string{"num_1", "num_2", "num_3"}
+
+// Check if stream has elements (O(1) when size is known)
+hasElements := glinq.From([]int{1, 2, 3}).Any()
+// true
+
+// Check if any element matches predicate
+hasEven := glinq.From([]int{1, 2, 3}).AnyMatch(func(x int) bool { return x%2 == 0 })
+// true
 ```
 
 ### Sorting and Ordering
@@ -100,7 +109,18 @@ except := glinq.Except(set1, set2).ToSlice()      // [1, 2]
 
 ## Performance Characteristics
 
-glinq is optimized for performance with zero-copy defaults, following C# LINQ's approach.
+glinq is optimized for performance with zero-copy defaults and automatic size tracking, following C# LINQ's approach.
+
+### Size-Based Optimizations
+
+glinq automatically tracks size information and uses it for optimizations:
+
+- **`Count()`** - O(1) when size is known, O(n) otherwise
+- **`Any()`** - O(1) when size is known, iterates until first element otherwise  
+- **`ToSlice()`** - Preallocates capacity when size is known, avoiding reallocations
+- **`Chunk()`** - Preallocates result slice capacity when size is known
+
+Size is preserved through 1-to-1 transformations (`Select`, `Take`, `Skip`, etc.) and lost through filtering operations (`Where`, `DistinctBy`, etc.).
 
 ### Stream Creation Performance
 
