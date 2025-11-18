@@ -3,6 +3,8 @@ package glinq
 // Distinct removes duplicates from Stream.
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
+//
+// SIZE: Loses size (unknown how many duplicates exist).
 func Distinct[T comparable](enum Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -23,10 +25,13 @@ func Distinct[T comparable](enum Enumerable[T]) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown how many duplicates
 	}
 }
 
 // DistinctBy removes duplicates by key extracted by keySelector.
+//
+// SIZE: Loses size (unknown how many duplicates exist).
 func (s *stream[T]) DistinctBy(keySelector func(T) any) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -49,5 +54,6 @@ func (s *stream[T]) DistinctBy(keySelector func(T) any) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown how many duplicates
 	}
 }

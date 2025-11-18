@@ -1,9 +1,14 @@
 package glinq
 
 // ToSlice materializes Stream into a slice.
+// OPTIMIZATION: Preallocates capacity if size is known.
 func (s *stream[T]) ToSlice() []T {
 	iterator := s.sourceFactory() // Fresh iterator
 	var result []T
+	// OPTIMIZATION: preallocate if size known
+	if s.size != nil {
+		result = make([]T, 0, *s.size)
+	}
 	for {
 		value, ok := iterator()
 		if !ok {
@@ -21,7 +26,14 @@ func (s *stream[T]) First() (T, bool) {
 }
 
 // Count returns the number of elements in Stream.
+// OPTIMIZATION: Returns O(1) if size is known, otherwise O(n).
 func (s *stream[T]) Count() int {
+	// OPTIMIZATION: O(1) if size known!
+	if s.size != nil {
+		return *s.size
+	}
+
+	// Fallback: iterate and count
 	iterator := s.sourceFactory() // Fresh iterator
 	count := 0
 	for {
@@ -79,6 +91,8 @@ func (s *stream[T]) ForEach(action func(T)) {
 // Chunk splits Stream into chunks of specified size and returns slice of slices.
 // The last chunk may contain fewer elements than the specified size.
 //
+// SIZE: Calculated as ceil(sourceSize / size) if source size known, else unknown.
+//
 // Example:
 //
 //	numbers := []int{1, 2, 3, 4, 5, 6, 7}
@@ -91,6 +105,11 @@ func (s *stream[T]) Chunk(size int) [][]T {
 
 	iterator := s.sourceFactory() // Fresh iterator
 	var result [][]T
+	// OPTIMIZATION: preallocate if size known
+	if s.size != nil {
+		chunkCount := (*s.size + size - 1) / size // ceil division
+		result = make([][]T, 0, chunkCount)
+	}
 	var currentChunk []T
 
 	for {

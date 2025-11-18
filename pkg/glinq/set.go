@@ -2,7 +2,20 @@ package glinq
 
 // Concat concatenates the current Stream with another Enumerable (preserving duplicates).
 // Elements from the current Stream come first, then elements from other.
+//
+// SIZE: Calculated as currentSize + otherSize if both known, else unknown.
 func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
+	var newSize *int
+	if s.size != nil {
+		if sizable, ok := other.(Sizable[T]); ok {
+			if otherSize, known := sizable.Size(); known {
+				size := *s.size + otherSize
+				newSize = &size
+			}
+		}
+	}
+	// else: nil (unknown)
+
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			source := s.sourceFactory() // Get fresh source
@@ -20,12 +33,15 @@ func (s *stream[T]) Concat(other Enumerable[T]) Stream[T] {
 				return other.Next()
 			}
 		},
+		size: newSize, // CALCULATED: currentSize + otherSize if both known
 	}
 }
 
 // Union returns the union of two Enumerables (all unique elements from both).
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
+//
+// SIZE: Loses size (unknown how many duplicates exist).
 //
 // Example:
 //
@@ -63,12 +79,15 @@ func Union[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown how many duplicates
 	}
 }
 
 // Intersect returns the intersection of two Enumerables.
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
+//
+// SIZE: Loses size (unknown result count).
 func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -98,12 +117,15 @@ func Intersect[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown result count
 	}
 }
 
 // Except returns the difference of Enumerables (elements from current that are not in other).
 // T must be comparable, otherwise code will not compile.
 // This is a function (not a method) because methods cannot have their own type constraints.
+//
+// SIZE: Loses size (unknown result count).
 func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -133,5 +155,6 @@ func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown result count
 	}
 }

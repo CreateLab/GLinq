@@ -7,9 +7,23 @@ type Enumerable[T any] interface {
 	Next() (T, bool)
 }
 
+// Sizable extends Enumerable with optional size information.
+// This is an optional interface - not all Enumerables need to implement it.
+// Size information is used for performance optimization of terminal operations.
+type Sizable[T any] interface {
+	Enumerable[T]
+
+	// Size returns the known size of the collection and true,
+	// or 0 and false if size is unknown.
+	// This is a hint for optimization - implementations should return
+	// (0, false) rather than computing size expensively.
+	Size() (int, bool)
+}
+
 // Stream extends Enumerable and adds operators for working with sequences.
 type Stream[T any] interface {
 	Enumerable[T] // Embed Enumerable
+	Sizable[T]    // Embed Sizable for size information
 	// Where filters elements by predicate.
 	Where(predicate func(T) bool) Stream[T]
 	// Select transforms elements to the same type.
@@ -101,6 +115,7 @@ type Stream[T any] interface {
 type stream[T any] struct {
 	sourceFactory   func() func() (T, bool)
 	currentIterator func() (T, bool) // For Enumerable.Next()
+	size            *int             // nil if unknown, pointer to size if known
 }
 
 // From creates a Stream from a slice.
@@ -117,6 +132,7 @@ type stream[T any] struct {
 //	stream := From(numbers)
 //	// Efficient - no copying!
 func From[T any](slice []T) Stream[T] {
+	size := len(slice)
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			index := 0 // Fresh index for each iterator
@@ -130,6 +146,7 @@ func From[T any](slice []T) Stream[T] {
 				return result, true
 			}
 		},
+		size: &size,
 	}
 }
 
@@ -151,6 +168,7 @@ func FromSafe[T any](slice []T) Stream[T] {
 	data := make([]T, len(slice))
 	copy(data, slice)
 
+	size := len(data)
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			index := 0 // Fresh index for each iterator
@@ -164,11 +182,13 @@ func FromSafe[T any](slice []T) Stream[T] {
 				return result, true
 			}
 		},
+		size: &size,
 	}
 }
 
 // Empty creates an empty Stream that contains no elements.
 func Empty[T any]() Stream[T] {
+	size := 0
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			return func() (T, bool) {
@@ -176,6 +196,7 @@ func Empty[T any]() Stream[T] {
 				return zero, false
 			}
 		},
+		size: &size,
 	}
 }
 
@@ -193,6 +214,7 @@ func Range(start, count int) Stream[int] {
 				return result, true
 			}
 		},
+		size: &count,
 	}
 }
 
@@ -204,11 +226,27 @@ func (s *stream[T]) Next() (T, bool) {
 	return s.currentIterator()
 }
 
+// Size implements Sizable
+func (s *stream[T]) Size() (int, bool) {
+	if s.size == nil {
+		return 0, false
+	}
+	return *s.size, true
+}
+
 // FromEnumerable creates a Stream from any Enumerable.
+// SIZE: Preserves size if source is Sizable, otherwise unknown.
 func FromEnumerable[T any](enum Enumerable[T]) Stream[T] {
+	var size *int
+	if sizable, ok := enum.(Sizable[T]); ok {
+		if s, known := sizable.Size(); known {
+			size = &s
+		}
+	}
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			return enum.Next
 		},
+		size: size,
 	}
 }

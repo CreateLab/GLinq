@@ -3,6 +3,8 @@ package glinq
 import "sort"
 
 // Where filters elements by predicate.
+//
+// SIZE: Loses size (unknown how many elements pass filter).
 func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
@@ -20,11 +22,14 @@ func (s *stream[T]) Where(predicate func(T) bool) Stream[T] {
 				}
 			}
 		},
+		size: nil, // LOSE: unknown how many pass filter
 	}
 }
 
 // Select transforms elements to the same type.
 // Supports method chaining.
+//
+// SIZE: Preserves size (1-to-1 transformation).
 //
 // Example:
 //
@@ -45,11 +50,14 @@ func (s *stream[T]) Select(mapper func(T) T) Stream[T] {
 				return mapper(value), true
 			}
 		},
+		size: s.size, // PRESERVE: 1-to-1 transformation
 	}
 }
 
 // SelectWithIndex transforms elements to the same type, providing index to mapper function.
 // Supports method chaining.
+//
+// SIZE: Preserves size (1-to-1 transformation).
 //
 // Example:
 //
@@ -73,11 +81,14 @@ func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
 				return result, true
 			}
 		},
+		size: s.size, // PRESERVE: 1-to-1 transformation
 	}
 }
 
 // Map transforms elements to a different type.
 // This is a function (not a method) because in Go methods cannot have their own type parameters.
+//
+// SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 //
 // Example:
 //
@@ -87,6 +98,12 @@ func (s *stream[T]) SelectWithIndex(mapper func(T, int) T) Stream[T] {
 //	).ToSlice()
 //	// []string{"num_1", "num_2", "num_3"}
 func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
+	var size *int
+	if sizable, ok := enum.(Sizable[T]); ok {
+		if s, known := sizable.Size(); known {
+			size = &s
+		}
+	}
 	return &stream[R]{
 		sourceFactory: func() func() (R, bool) {
 			return func() (R, bool) {
@@ -98,11 +115,14 @@ func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 				return mapper(value), true
 			}
 		},
+		size: size, // PRESERVE if possible
 	}
 }
 
 // SelectWithIndex transforms elements to a different type, providing index to mapper function.
 // This is a function (not a method) because in Go methods cannot have their own type parameters.
+//
+// SIZE: Preserves size if source is Sizable (1-to-1 transformation).
 //
 // Example:
 //
@@ -112,6 +132,12 @@ func Select[T, R any](enum Enumerable[T], mapper func(T) R) Stream[R] {
 //	).ToSlice()
 //	// []string{"num_1_at_0", "num_2_at_1", "num_3_at_2"}
 func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream[R] {
+	var size *int
+	if sizable, ok := enum.(Sizable[T]); ok {
+		if s, known := sizable.Size(); known {
+			size = &s
+		}
+	}
 	return &stream[R]{
 		sourceFactory: func() func() (R, bool) {
 			index := 0 // Fresh counter
@@ -126,11 +152,26 @@ func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream
 				return result, true
 			}
 		},
+		size: size, // PRESERVE if possible
 	}
 }
 
 // Take takes the first n elements from Stream.
+//
+// SIZE: Calculated as min(sourceSize, n) if source size known, else n.
 func (s *stream[T]) Take(n int) Stream[T] {
+	var newSize *int
+	if s.size != nil {
+		size := *s.size
+		if size < n {
+			newSize = &size
+		} else {
+			newSize = &n
+		}
+	} else {
+		newSize = &n // Don't know source size, but result won't exceed n
+	}
+
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			source := s.sourceFactory() // Get fresh source
@@ -149,11 +190,24 @@ func (s *stream[T]) Take(n int) Stream[T] {
 				return value, true
 			}
 		},
+		size: newSize, // CALCULATED: min(source, n)
 	}
 }
 
 // Skip skips the first n elements from Stream.
+//
+// SIZE: Calculated as max(0, sourceSize - n) if source size known, else unknown.
 func (s *stream[T]) Skip(n int) Stream[T] {
+	var newSize *int
+	if s.size != nil {
+		size := *s.size - n
+		if size < 0 {
+			size = 0
+		}
+		newSize = &size
+	}
+	// else: nil (unknown)
+
 	return &stream[T]{
 		sourceFactory: func() func() (T, bool) {
 			source := s.sourceFactory() // Get fresh source
@@ -170,6 +224,7 @@ func (s *stream[T]) Skip(n int) Stream[T] {
 				return source()
 			}
 		},
+		size: newSize, // CALCULATED: max(0, source - n) or nil
 	}
 }
 
@@ -207,6 +262,8 @@ func heapifyDown[T any](items []T, i, n int, less func(a, b T) bool) {
 // TakeOrderedBy returns the first n elements ordered by the less function.
 // Uses a heap-based algorithm for efficient processing.
 //
+// SIZE: Calculated as min(sourceSize, n) if source size known, else n.
+//
 // Example:
 //
 //	numbers := []int{5, 2, 8, 1, 9, 3}
@@ -215,6 +272,21 @@ func heapifyDown[T any](items []T, i, n int, less func(a, b T) bool) {
 func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Stream[T] {
 	if n <= 0 {
 		return Empty[T]()
+	}
+
+	var size *int
+	if sizable, ok := enum.(Sizable[T]); ok {
+		if s, known := sizable.Size(); known {
+			if s < n {
+				size = &s
+			} else {
+				size = &n
+			}
+		} else {
+			size = &n // Don't know source size, but result won't exceed n
+		}
+	} else {
+		size = &n // Don't know source size, but result won't exceed n
 	}
 
 	return &stream[T]{
@@ -269,6 +341,7 @@ func TakeOrderedBy[T any](enum Enumerable[T], n int, less func(a, b T) bool) Str
 				return result, true
 			}
 		},
+		size: size, // CALCULATED: min(source, n)
 	}
 }
 
@@ -286,16 +359,20 @@ func TakeOrderedDescendingBy[T any](enum Enumerable[T], n int, less func(a, b T)
 
 // Reverse reverses the order of elements in the Stream.
 // NOTE: Reverse materializes the entire stream (partially lazy).
+//
+// SIZE: Preserves size (1-to-1 transformation, materializes).
 func (s *stream[T]) Reverse() Stream[T] {
 	items := s.ToSlice()
 	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
 		items[i], items[j] = items[j], items[i]
 	}
-	return From(items)
+	return From(items) // From preserves size
 }
 
 // SelectMany transforms each element into a sequence and flattens the resulting sequences.
 // This is a function (not a method) because in Go methods cannot have their own type parameters.
+//
+// SIZE: Loses size (1-to-many transformation, unknown result count).
 //
 // Example:
 //
@@ -336,5 +413,6 @@ func SelectMany[T, R any](enum Enumerable[T], selector func(T) Enumerable[R]) St
 				}
 			}
 		},
+		size: nil, // LOSE: 1-to-many transformation
 	}
 }
