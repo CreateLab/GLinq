@@ -159,7 +159,12 @@ func SelectWithIndex[T, R any](enum Enumerable[T], mapper func(T, int) R) Stream
 // Take takes the first n elements from Stream.
 //
 // SIZE: Calculated as min(sourceSize, n) if source size known, else n.
+// If n is negative, returns an empty Stream.
 func (s *stream[T]) Take(n int) Stream[T] {
+	if n < 0 {
+		return Empty[T]()
+	}
+
 	var newSize int
 	if s.size != -1 {
 		if s.size < n {
@@ -196,7 +201,17 @@ func (s *stream[T]) Take(n int) Stream[T] {
 // Skip skips the first n elements from Stream.
 //
 // SIZE: Calculated as max(0, sourceSize - n) if source size known, else unknown.
+// If n is negative, treats it as 0 (no skipping).
 func (s *stream[T]) Skip(n int) Stream[T] {
+	if n < 0 {
+		n = 0
+	}
+
+	// Early exit optimization: if skipping more than or equal to known size
+	if s.size != -1 && n >= s.size {
+		return Empty[T]()
+	}
+
 	var newSize = -1
 	if s.size != -1 {
 		size := s.size - n
@@ -224,6 +239,73 @@ func (s *stream[T]) Skip(n int) Stream[T] {
 			}
 		},
 		size: newSize,
+	}
+}
+
+// TakeWhile takes elements while the predicate returns true.
+// Stops at the first element where predicate returns false.
+//
+// SIZE: Loses size (unknown how many elements satisfy predicate).
+func (s *stream[T]) TakeWhile(predicate func(T) bool) Stream[T] {
+	return &stream[T]{
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			stopped := false            // Flag to stop iteration
+
+			return func() (T, bool) {
+				if stopped {
+					var zero T
+					return zero, false
+				}
+
+				value, ok := source()
+				if !ok {
+					var zero T
+					return zero, false
+				}
+
+				if !predicate(value) {
+					stopped = true
+					var zero T
+					return zero, false
+				}
+
+				return value, true
+			}
+		},
+		size: -1, // LOSE: unknown how many satisfy predicate
+	}
+}
+
+// SkipWhile skips elements while the predicate returns true.
+// Starts returning elements at the first element where predicate returns false.
+//
+// SIZE: Loses size (unknown how many elements to skip).
+func (s *stream[T]) SkipWhile(predicate func(T) bool) Stream[T] {
+	return &stream[T]{
+		sourceFactory: func() func() (T, bool) {
+			source := s.sourceFactory() // Get fresh source
+			skipping := true            // Flag to continue skipping
+
+			return func() (T, bool) {
+				for skipping {
+					value, ok := source()
+					if !ok {
+						var zero T
+						return zero, false
+					}
+
+					if !predicate(value) {
+						skipping = false
+						return value, true
+					}
+				}
+
+				// After skipping phase, return remaining elements
+				return source()
+			}
+		},
+		size: -1, // LOSE: unknown how many to skip
 	}
 }
 

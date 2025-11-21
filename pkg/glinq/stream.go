@@ -30,8 +30,30 @@ type Stream[T any] interface {
 	Select(mapper func(T) T) Stream[T]
 	// Take takes the first n elements from Stream.
 	Take(n int) Stream[T]
+	// TakeWhile takes elements while the predicate returns true.
+	// Stops at the first element where predicate returns false.
+	//
+	// SIZE: Loses size (unknown how many elements satisfy predicate).
+	//
+	// Example:
+	//
+	//	numbers := []int{1, 2, 3, 4, 5, 6}
+	//	result := From(numbers).TakeWhile(func(x int) bool { return x < 4 }).ToSlice()
+	//	// [1, 2, 3]
+	TakeWhile(predicate func(T) bool) Stream[T]
 	// Skip skips the first n elements from Stream.
 	Skip(n int) Stream[T]
+	// SkipWhile skips elements while the predicate returns true.
+	// Starts returning elements at the first element where predicate returns false.
+	//
+	// SIZE: Loses size (unknown how many elements to skip).
+	//
+	// Example:
+	//
+	//	numbers := []int{1, 2, 3, 4, 5, 6}
+	//	result := From(numbers).SkipWhile(func(x int) bool { return x < 4 }).ToSlice()
+	//	// [4, 5, 6]
+	SkipWhile(predicate func(T) bool) Stream[T]
 	// ToSlice materializes Stream into a slice.
 	ToSlice() []T
 	// First returns the first element and true, or zero value and false if Stream is empty.
@@ -201,7 +223,12 @@ func Empty[T any]() Stream[T] {
 }
 
 // Range creates a Stream of integers from start to start+count-1.
+// If count is negative, returns an empty Stream.
 func Range(start, count int) Stream[int] {
+	if count < 0 {
+		return Empty[int]()
+	}
+
 	return &stream[int]{
 		sourceFactory: func() func() (int, bool) {
 			index := 0 // Fresh index for each iterator

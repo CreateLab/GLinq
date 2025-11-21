@@ -25,7 +25,7 @@ result := glinq.From([]int{1, 2, 3, 4, 5}).
 ## Main Operations
 
 - **Stream Creation**: `From`, `Empty`, `Range`, `FromEnumerable`, `FromMap`
-- **Filtering**: `Where`, `DistinctBy`, `Take`, `Skip`
+- **Filtering**: `Where`, `DistinctBy`, `Take`, `TakeWhile`, `Skip`, `SkipWhile`
 - **Transformation**: `Select`, `SelectWithIndex`, `SelectMany`
 - **Ordering**: `OrderBy`, `OrderByDescending`, `Reverse`
 - **Grouping**: `GroupBy`

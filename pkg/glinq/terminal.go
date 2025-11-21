@@ -106,6 +106,7 @@ func (s *stream[T]) ForEach(action func(T)) {
 // The last chunk may contain fewer elements than the specified size.
 //
 // SIZE: Calculated as ceil(sourceSize / size) if source size known, else unknown.
+// If size is negative or zero, returns nil.
 //
 // Example:
 //

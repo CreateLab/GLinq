@@ -4,6 +4,14 @@
 // All operations (Where, Select, Take, Skip) are executed lazily and do not start until a terminal
 // operation (ToSlice, First, Count, Any, All, ForEach) is called.
 //
+// Thread Safety:
+// Stream operations are NOT thread-safe. A Stream should not be used concurrently
+// by multiple goroutines without external synchronization. However, each Stream
+// operation returns a new Stream instance, so you can safely use different Stream
+// instances in different goroutines. Modifying the underlying data structure
+// (slice or map) while iterating may lead to undefined behavior.
+// For concurrent modifications, use FromSafe() or FromMapSafe() to create isolated snapshots.
+//
 // Example usage:
 //
 //	numbers := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
@@ -25,7 +33,9 @@
 //   - Where: filter by predicate
 //   - Select: transform elements
 //   - Take: first n elements
+//   - TakeWhile: take elements while predicate returns true
 //   - Skip: skip first n elements
+//   - SkipWhile: skip elements while predicate returns true
 //   - Reverse: reverse order of elements (materializes stream)
 //   - SelectMany: flatten sequences (function, not method)
 //   - GroupBy: group elements by key (function, returns KeyValue pairs)

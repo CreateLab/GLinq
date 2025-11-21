@@ -300,5 +300,43 @@ func main() {
 	).ToSlice()
 	fmt.Printf("Except of %v and %v: %v\n\n", []int{1, 2, 3}, []int{2, 3}, except)
 
+	// Example 32: TakeWhile - take elements while condition is true
+	fmt.Println("Example 32: TakeWhile - Take elements while condition is true")
+	numbers19 := []int{1, 2, 3, 4, 5, 6, 7, 8}
+	takenWhile := glinq.From(numbers19).
+		TakeWhile(func(x int) bool { return x < 5 }).
+		ToSlice()
+	fmt.Printf("Input: %v\n", numbers19)
+	fmt.Printf("TakeWhile(x < 5): %v\n\n", takenWhile)
+
+	// Example 33: SkipWhile - skip elements while condition is true
+	fmt.Println("Example 33: SkipWhile - Skip elements while condition is true")
+	numbers20 := []int{1, 2, 3, 4, 5, 6, 7, 8}
+	skippedWhile := glinq.From(numbers20).
+		SkipWhile(func(x int) bool { return x < 5 }).
+		ToSlice()
+	fmt.Printf("Input: %v\n", numbers20)
+	fmt.Printf("SkipWhile(x < 5): %v\n\n", skippedWhile)
+
+	// Example 34: TakeWhile and SkipWhile combined
+	fmt.Println("Example 34: TakeWhile and SkipWhile combined")
+	numbers21 := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	combinedWhile := glinq.From(numbers21).
+		SkipWhile(func(x int) bool { return x < 3 }).
+		TakeWhile(func(x int) bool { return x < 7 }).
+		ToSlice()
+	fmt.Printf("Input: %v\n", numbers21)
+	fmt.Printf("SkipWhile(x < 3) -> TakeWhile(x < 7): %v\n\n", combinedWhile)
+
+	// Example 35: TakeWhile with chaining
+	fmt.Println("Example 35: TakeWhile with chaining")
+	numbers22 := []int{2, 4, 6, 3, 8, 10, 12}
+	chained := glinq.From(numbers22).
+		TakeWhile(func(x int) bool { return x%2 == 0 }).
+		Select(func(x int) int { return x * 2 }).
+		ToSlice()
+	fmt.Printf("Input: %v\n", numbers22)
+	fmt.Printf("TakeWhile(even) -> Select(x*2): %v\n\n", chained)
+
 	fmt.Println("\n=== End of Examples ===")
 }
