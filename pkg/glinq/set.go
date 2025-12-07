@@ -163,3 +163,58 @@ func Except[T comparable](e1, e2 Enumerable[T]) Stream[T] {
 		size: -1, // LOSE: unknown result count
 	}
 }
+
+// Zip combines two Enumerables by applying a result selector function to corresponding elements.
+// The result stream stops when either source is exhausted.
+// This is a function (not a method) because methods cannot have their own type parameters.
+//
+// SIZE: Calculated as min(e1Size, e2Size) if both sizes are known, else unknown.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3}
+//	letters := []string{"a", "b", "c"}
+//	zipped := Zip(
+//	    From(numbers),
+//	    From(letters),
+//	    func(n int, s string) string { return fmt.Sprintf("%d:%s", n, s) },
+//	).ToSlice()
+//	// ["1:a", "2:b", "3:c"]
+func Zip[T1, T2, R any](e1 Enumerable[T1], e2 Enumerable[T2], resultSelector func(T1, T2) R) Stream[R] {
+	var size = -1
+	if sizable1, ok1 := e1.(Sizable[T1]); ok1 {
+		if sizable2, ok2 := e2.(Sizable[T2]); ok2 {
+			if s1, known1 := sizable1.Size(); known1 {
+				if s2, known2 := sizable2.Size(); known2 {
+					// Take minimum of both sizes
+					if s1 < s2 {
+						size = s1
+					} else {
+						size = s2
+					}
+				}
+			}
+		}
+	}
+
+	return &stream[R]{
+		sourceFactory: func() func() (R, bool) {
+			return func() (R, bool) {
+				val1, ok1 := e1.Next()
+				if !ok1 {
+					var zero R
+					return zero, false
+				}
+
+				val2, ok2 := e2.Next()
+				if !ok2 {
+					var zero R
+					return zero, false
+				}
+
+				return resultSelector(val1, val2), true
+			}
+		},
+		size: size, // CALCULATED: min(e1Size, e2Size) if both known
+	}
+}

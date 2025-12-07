@@ -1,5 +1,7 @@
 package glinq
 
+import "reflect"
+
 // ToSlice materializes Stream into a slice.
 // OPTIMIZATION: Preallocates capacity if size is known.
 func (s *stream[T]) ToSlice() []T {
@@ -165,6 +167,134 @@ func (s *stream[T]) Last() (T, bool) {
 	}
 
 	return last, found
+}
+
+// ElementAt returns the element at the specified index and true, or zero value and false if index is out of range.
+// Index is zero-based. Negative indices are treated as out of range.
+//
+// OPTIMIZATION: If size is known and index is out of range, returns immediately without iteration.
+func (s *stream[T]) ElementAt(index int) (T, bool) {
+	if index < 0 {
+		var zero T
+		return zero, false
+	}
+
+	// OPTIMIZATION: If size is known, check bounds first
+	if s.size != -1 {
+		if index >= s.size {
+			var zero T
+			return zero, false
+		}
+	}
+
+	iterator := s.sourceFactory() // Fresh iterator
+	currentIndex := 0
+
+	for {
+		value, ok := iterator()
+		if !ok {
+			var zero T
+			return zero, false
+		}
+		if currentIndex == index {
+			return value, true
+		}
+		currentIndex++
+	}
+}
+
+// ElementAtOrDefault returns the element at the specified index, or the default value if index is out of range.
+// Index is zero-based. Negative indices return the default value.
+//
+// OPTIMIZATION: If size is known and index is out of range, returns default immediately without iteration.
+func (s *stream[T]) ElementAtOrDefault(index int, defaultValue T) T {
+	if index < 0 {
+		return defaultValue
+	}
+
+	// OPTIMIZATION: If size is known, check bounds first
+	if s.size != -1 {
+		if index >= s.size {
+			return defaultValue
+		}
+	}
+
+	iterator := s.sourceFactory() // Fresh iterator
+	currentIndex := 0
+
+	for {
+		value, ok := iterator()
+		if !ok {
+			return defaultValue
+		}
+		if currentIndex == index {
+			return value
+		}
+		currentIndex++
+	}
+}
+
+// Contains checks if the Stream contains the specified element.
+// Uses reflect.DeepEqual for comparison, which works with all types including non-comparable ones.
+//
+// OPTIMIZATION: If size is known and it's 0, returns false immediately.
+//
+// Example:
+//
+//	numbers := []int{1, 2, 3, 4, 5}
+//	hasThree := From(numbers).Contains(3)
+//	// hasThree = true
+func (s *stream[T]) Contains(value T) bool {
+	// OPTIMIZATION: If size is known and it's 0, return false immediately
+	if s.size != -1 && s.size == 0 {
+		return false
+	}
+
+	iterator := s.sourceFactory() // Fresh iterator
+	for {
+		val, ok := iterator()
+		if !ok {
+			break
+		}
+		// Use reflect.DeepEqual for comparison - works with all types
+		if reflect.DeepEqual(val, value) {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsBy checks if the Stream contains an element matching the specified key.
+// keySelector extracts a key from each element, and the result is compared with the target key.
+// This allows custom comparison logic, similar to DistinctBy.
+//
+// OPTIMIZATION: If size is known and it's 0, returns false immediately.
+//
+// Example:
+//
+//	type Person struct { ID int; Name string }
+//	people := []Person{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}}
+//	hasPersonWithID1 := From(people).ContainsBy(1, func(p Person) any { return p.ID })
+//	// hasPersonWithID1 = true
+func (s *stream[T]) ContainsBy(targetKey any, keySelector func(T) any) bool {
+	// OPTIMIZATION: If size is known and it's 0, return false immediately
+	if s.size != -1 && s.size == 0 {
+		return false
+	}
+
+	iterator := s.sourceFactory() // Fresh iterator
+	for {
+		val, ok := iterator()
+		if !ok {
+			break
+		}
+		key := keySelector(val)
+		// Use reflect.DeepEqual for key comparison - works with all types
+		if reflect.DeepEqual(key, targetKey) {
+			return true
+		}
+	}
+	return false
 }
 
 // Min returns the minimum element using comparator function.

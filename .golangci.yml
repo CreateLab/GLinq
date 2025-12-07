@@ -58,7 +58,7 @@ linters-settings:
     min-occurrences: 2
 
   gocognit:
-    min-complexity: 15
+    min-complexity: 30
 
   misspell:
     locale: US

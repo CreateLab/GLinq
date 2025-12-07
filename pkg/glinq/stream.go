@@ -73,6 +73,40 @@ type Stream[T any] interface {
 	Chunk(size int) [][]T
 	// Last returns the last element and true, or zero value and false if Stream is empty.
 	Last() (T, bool)
+	// ElementAt returns the element at the specified index and true, or zero value and false if index is out of range.
+	// Index is zero-based. Negative indices are treated as out of range.
+	//
+	// Example:
+	//   numbers := []int{10, 20, 30, 40}
+	//   value, ok := From(numbers).ElementAt(2)
+	//   // value = 30, ok = true
+	ElementAt(index int) (T, bool)
+	// ElementAtOrDefault returns the element at the specified index, or the default value if index is out of range.
+	// Index is zero-based. Negative indices return the default value.
+	//
+	// Example:
+	//   numbers := []int{10, 20, 30}
+	//   value := From(numbers).ElementAtOrDefault(5, 0)
+	//   // value = 0 (default value)
+	ElementAtOrDefault(index int, defaultValue T) T
+	// Contains checks if the Stream contains the specified element.
+	// Uses reflect.DeepEqual for comparison, which works with all types including non-comparable ones.
+	//
+	// Example:
+	//   numbers := []int{1, 2, 3, 4, 5}
+	//   hasThree := From(numbers).Contains(3)
+	//   // hasThree = true
+	Contains(value T) bool
+	// ContainsBy checks if the Stream contains an element matching the specified key.
+	// keySelector extracts a key from each element, and the result is compared with the target key.
+	// This allows custom comparison logic, similar to DistinctBy.
+	//
+	// Example:
+	//   type Person struct { ID int; Name string }
+	//   people := []Person{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}}
+	//   hasPersonWithID1 := From(people).ContainsBy(1, func(p Person) any { return p.ID })
+	//   // hasPersonWithID1 = true
+	ContainsBy(targetKey any, keySelector func(T) any) bool
 	// Min returns the minimum element using comparator function.
 	// Comparator should return negative value if first < second, 0 if equal, positive if first > second.
 	Min(comparator func(T, T) int) (T, bool)

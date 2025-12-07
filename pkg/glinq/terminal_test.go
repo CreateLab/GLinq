@@ -262,3 +262,309 @@ func TestAggregate(t *testing.T) {
 		}
 	})
 }
+
+func TestElementAt(t *testing.T) {
+	t.Run("ElementAt with valid index", func(t *testing.T) {
+		slice := []int{10, 20, 30, 40}
+		stream := From(slice)
+		value, ok := stream.ElementAt(2)
+
+		if !ok {
+			t.Errorf("expected ok=true, got false")
+		}
+		if value != 30 {
+			t.Errorf("expected 30, got %d", value)
+		}
+	})
+
+	t.Run("ElementAt with first element", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value, ok := stream.ElementAt(0)
+
+		if !ok {
+			t.Errorf("expected ok=true, got false")
+		}
+		if value != 10 {
+			t.Errorf("expected 10, got %d", value)
+		}
+	})
+
+	t.Run("ElementAt with out of range index", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value, ok := stream.ElementAt(10)
+
+		if ok {
+			t.Errorf("expected ok=false, got true")
+		}
+		if value != 0 {
+			t.Errorf("expected 0, got %d", value)
+		}
+	})
+
+	t.Run("ElementAt with negative index", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value, ok := stream.ElementAt(-1)
+
+		if ok {
+			t.Errorf("expected ok=false, got true")
+		}
+		if value != 0 {
+			t.Errorf("expected 0, got %d", value)
+		}
+	})
+
+	t.Run("ElementAt with empty stream", func(t *testing.T) {
+		stream := Empty[int]()
+		value, ok := stream.ElementAt(0)
+
+		if ok {
+			t.Errorf("expected ok=false, got true")
+		}
+		if value != 0 {
+			t.Errorf("expected 0, got %d", value)
+		}
+	})
+
+	t.Run("ElementAt with filtered stream", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5, 6, 7, 8}
+		stream := From(slice).Where(func(x int) bool { return x%2 == 0 })
+		value, ok := stream.ElementAt(1)
+
+		if !ok {
+			t.Errorf("expected ok=true, got false")
+		}
+		if value != 4 {
+			t.Errorf("expected 4, got %d", value)
+		}
+	})
+}
+
+func TestElementAtOrDefault(t *testing.T) {
+	t.Run("ElementAtOrDefault with valid index", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value := stream.ElementAtOrDefault(1, 999)
+
+		if value != 20 {
+			t.Errorf("expected 20, got %d", value)
+		}
+	})
+
+	t.Run("ElementAtOrDefault with out of range index", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value := stream.ElementAtOrDefault(10, 999)
+
+		if value != 999 {
+			t.Errorf("expected 999, got %d", value)
+		}
+	})
+
+	t.Run("ElementAtOrDefault with negative index", func(t *testing.T) {
+		slice := []int{10, 20, 30}
+		stream := From(slice)
+		value := stream.ElementAtOrDefault(-1, 999)
+
+		if value != 999 {
+			t.Errorf("expected 999, got %d", value)
+		}
+	})
+
+	t.Run("ElementAtOrDefault with empty stream", func(t *testing.T) {
+		stream := Empty[int]()
+		value := stream.ElementAtOrDefault(0, 999)
+
+		if value != 999 {
+			t.Errorf("expected 999, got %d", value)
+		}
+	})
+
+	t.Run("ElementAtOrDefault with string default", func(t *testing.T) {
+		slice := []string{"a", "b", "c"}
+		stream := From(slice)
+		value := stream.ElementAtOrDefault(5, "default")
+
+		if value != "default" {
+			t.Errorf("expected 'default', got '%s'", value)
+		}
+	})
+}
+
+func TestContains(t *testing.T) {
+	t.Run("Contains with existing element", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5}
+		stream := From(slice)
+		result := stream.Contains(3)
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("Contains with non-existing element", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5}
+		stream := From(slice)
+		result := stream.Contains(10)
+
+		if result {
+			t.Errorf("expected false, got true")
+		}
+	})
+
+	t.Run("Contains with empty stream", func(t *testing.T) {
+		stream := Empty[int]()
+		result := stream.Contains(1)
+
+		if result {
+			t.Errorf("expected false, got true")
+		}
+	})
+
+	t.Run("Contains with strings", func(t *testing.T) {
+		slice := []string{"apple", "banana", "cherry"}
+		stream := From(slice)
+		result := stream.Contains("banana")
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("Contains with filtered stream", func(t *testing.T) {
+		slice := []int{1, 2, 3, 4, 5, 6, 7, 8}
+		stream := From(slice).Where(func(x int) bool { return x%2 == 0 })
+		result := stream.Contains(4)
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("Contains with struct", func(t *testing.T) {
+		type Person struct {
+			Name string
+			Age  int
+		}
+		people := []Person{{Name: "Alice", Age: 30}, {Name: "Bob", Age: 25}}
+		stream := From(people)
+		result := stream.Contains(Person{Name: "Alice", Age: 30})
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+}
+
+func TestContainsBy(t *testing.T) {
+	t.Run("ContainsBy with ID field", func(t *testing.T) {
+		type Person struct {
+			ID   int
+			Name string
+		}
+		people := []Person{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}, {ID: 3, Name: "Charlie"}}
+		stream := From(people)
+		result := stream.ContainsBy(2, func(p Person) any { return p.ID })
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("ContainsBy with non-existing key", func(t *testing.T) {
+		type Person struct {
+			ID   int
+			Name string
+		}
+		people := []Person{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}}
+		stream := From(people)
+		result := stream.ContainsBy(999, func(p Person) any { return p.ID })
+
+		if result {
+			t.Errorf("expected false, got true")
+		}
+	})
+
+	t.Run("ContainsBy with string key", func(t *testing.T) {
+		type Person struct {
+			ID   int
+			Name string
+		}
+		people := []Person{{ID: 1, Name: "Alice"}, {ID: 2, Name: "Bob"}}
+		stream := From(people)
+		result := stream.ContainsBy("Alice", func(p Person) any { return p.Name })
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("ContainsBy with composite key", func(t *testing.T) {
+		type Item struct {
+			Category string
+			Name     string
+		}
+		items := []Item{
+			{Category: "Food", Name: "Apple"},
+			{Category: "Drink", Name: "Water"},
+		}
+		stream := From(items)
+		result := stream.ContainsBy("Food-Apple", func(i Item) any {
+			return i.Category + "-" + i.Name
+		})
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("ContainsBy with empty stream", func(t *testing.T) {
+		type Person struct {
+			ID   int
+			Name string
+		}
+		stream := Empty[Person]()
+		result := stream.ContainsBy(1, func(p Person) any { return p.ID })
+
+		if result {
+			t.Errorf("expected false, got true")
+		}
+	})
+
+	t.Run("ContainsBy with filtered stream", func(t *testing.T) {
+		type Person struct {
+			ID   int
+			Name string
+			Age  int
+		}
+		people := []Person{
+			{ID: 1, Name: "Alice", Age: 30},
+			{ID: 2, Name: "Bob", Age: 25},
+			{ID: 3, Name: "Charlie", Age: 35},
+		}
+		stream := From(people).Where(func(p Person) bool { return p.Age > 25 })
+		result := stream.ContainsBy(3, func(p Person) any { return p.ID })
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+
+	t.Run("ContainsBy with int slice key", func(t *testing.T) {
+		type Data struct {
+			Values []int
+		}
+		data := []Data{
+			{Values: []int{1, 2, 3}},
+			{Values: []int{4, 5, 6}},
+		}
+		stream := From(data)
+		result := stream.ContainsBy([]int{1, 2, 3}, func(d Data) any { return d.Values })
+
+		if !result {
+			t.Errorf("expected true, got false")
+		}
+	})
+}

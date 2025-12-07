@@ -29,7 +29,8 @@ result := glinq.From([]int{1, 2, 3, 4, 5}).
 - **Transformation**: `Select`, `SelectWithIndex`, `SelectMany`
 - **Ordering**: `OrderBy`, `OrderByDescending`, `Reverse`
 - **Grouping**: `GroupBy`
-- **Terminal**: `ToSlice`, `First`, `Count`, `Any`, `AnyMatch`, `All`, `Aggregate`, `ForEach`
+- **Combining**: `Zip` - combine two sequences using result selector
+- **Terminal**: `ToSlice`, `First`, `Last`, `ElementAt`, `ElementAtOrDefault`, `Contains`, `ContainsBy`, `Count`, `Any`, `AnyMatch`, `All`, `Aggregate`, `ForEach`
 - **Size Information**: `Size()` - returns known size for performance optimizations
 
 ## Performance Optimizations

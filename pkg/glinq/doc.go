@@ -39,10 +39,16 @@
 //   - Reverse: reverse order of elements (materializes stream)
 //   - SelectMany: flatten sequences (function, not method)
 //   - GroupBy: group elements by key (function, returns KeyValue pairs)
+//   - Zip: combine two sequences using result selector (function)
 //
 // Terminal operations (materialize result):
 //   - ToSlice: convert to slice
 //   - First: first element
+//   - Last: last element
+//   - ElementAt: element at specified index
+//   - ElementAtOrDefault: element at index or default value
+//   - Contains: check if stream contains element
+//   - ContainsBy: check if stream contains element matching key (with custom key selector)
 //   - Count: number of elements
 //   - Any: check if any element exists
 //   - All: check if all elements satisfy condition
