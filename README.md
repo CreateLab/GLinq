@@ -1,3 +1,7 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/CreateLab/glinq)](https://goreportcard.com/report/github.com/CreateLab/glinq)
+[![GoDoc](https://pkg.go.dev/badge/github.com/CreateLab/glinq)](https://pkg.go.dev/github.com/CreateLab/glinq)
+[![codecov](https://codecov.io/gh/CreateLab/glinq/branch/main/graph/badge.svg)](https://codecov.io/gh/CreateLab/glinq)
+
 # glinq
 
 LINQ-like API for Go with support for lazy evaluation.
