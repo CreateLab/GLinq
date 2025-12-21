@@ -33,3 +33,55 @@ go.sum
 .env
 .env.local
 *.local
+
+# Anthropic Claude
+.claude/
+claude_workspace/
+claude-sessions/
+
+# OpenAI
+.openai/
+chatgpt/
+gpt_workspace/
+
+# Cursor
+.cursor/
+cursor_rules/
+
+# Windsurf
+.windsurf/
+
+# v0 (Vercel)
+.v0/
+
+# Aider
+.aider/
+
+# Continue.dev
+.continue/
+
+# Codeium
+.codeium/
+
+# Tabnine
+.tabnine/
+
+# Sourcegraph Cody
+.cody/
+
+# GitHub Copilot
+.copilot/
+
+# Amazon CodeWhisperer
+.codewhisperer/
+
+# Bolt.new
+.bolt/
+
+# Coverage
+coverage
+coverage.out
+coverage.txt
+
+# Tooling
+.claude/
