@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main, develop ]
   pull_request:
-    # Запускается для ЛЮБОГО pull request, независимо от целевой ветки
     branches: [ '**' ]
 
 jobs:
@@ -13,14 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Оптимальный набор версий: последняя стабильная + 1 предыдущая
         go-version: ['1.22', '1.23']
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Важно для pull_request событий
           fetch-depth: 0
 
       - name: Set up Go
@@ -44,11 +41,12 @@ jobs:
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./pkg/...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: matrix.go-version == '1.23' && github.event_name == 'pull_request'
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.go-version == '1.23'
         with:
-          file: ./coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
           fail_ci_if_error: false
 
   lint:
